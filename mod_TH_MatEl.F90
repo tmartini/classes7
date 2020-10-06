@@ -5,6 +5,9 @@ IMPLICIT NONE
  public :: EvalXSec_PP_TH,EvalXSec_PP_TBH         ! hadronic
  public :: EvalAmp_QB_TH, EvalAmp_QbarBbar_TbarH  ! t-channel
  public :: EvalAmp_QQB_THBbar,EvalAmp_QQB_TbarHB  ! s-channel
+  
+ public :: EvalXSec_PP_TWMH,EvalXSec_PP_TBWPH     ! hadronic
+ public :: EvalAmp_GB_TWMH,EvalAmp_GBB_TBWPH      ! tw-channel
  
  private
 
@@ -144,6 +147,106 @@ include 'includeVars.F90'
       endif
       Res = Res/x1/x2/(2d0*E_CMS**2)
 
+!     restore incoming momenta (in all-outgoing convention)
+      Mom(1,1:2) = -0.5d0*Collider_Energy
+      Mom(4,1)   = -0.5d0*Collider_Energy * sign(1d0,Mom(4,2))
+      Mom(4,2)   = +0.5d0*Collider_Energy * sign(1d0,Mom(4,2))
+  
+RETURN
+END SUBROUTINE
+
+
+SUBROUTINE EvalXSec_PP_TWMH(Mom,TTBHcoupl,TopDecays,Res)
+implicit none
+real(8) :: Mom(1:4,1:11),Res
+complex(8) :: TTBHcoupl(1:2)
+integer :: TopDecays! 0=stable, 1=di-leptonic
+real(8) :: Etot,Pztot
+real(8) :: x1,x2,PDFScale,Collider_Energy,E_CMS
+real(8) :: NNpdf(1:2,-6:7),LO_Res_Unpol(-6:6,-6:6)
+integer, parameter :: inLeft=1,inRight=2,Hbos=3,t=4, qout=5, b=6,W=7,lep=8,nu=9, lepW=10, nuW=11
+include 'includeVars.F90'
+      
+
+      
+      Collider_Energy = -(Mom(1,inLeft)+Mom(1,inRight))
+      if( TopDecays.eq.0 ) then
+          Etot = Mom(1,Hbos)+Mom(1,t)+Mom(1,qout)
+          Pztot= Mom(4,Hbos)+Mom(4,t)+Mom(4,qout)
+      else
+          Etot = Mom(1,Hbos) + Mom(1,lepW) + Mom(1,nuW) + Mom(1,b)+Mom(1,lep)+Mom(1,nu)
+          Pztot= Mom(4,Hbos) + Mom(4,lepW) + Mom(4,nuW) + Mom(4,b)+Mom(4,lep)+Mom(4,nu)
+      endif
+      x1 = (Etot+Pztot * sign(1d0,Mom(4,inRight)) )/Collider_Energy
+      x2 = (Etot-Pztot * sign(1d0,Mom(4,inRight)) )/Collider_Energy
+      E_CMS = dsqrt(x1*x2)*Collider_Energy
+      PDFScale = 0.25d0*( m_Top + m_Reso ) * 100d0
+
+      Mom(1:4,inLeft)  = x1 * Mom(1:4,inLeft)
+      Mom(1:4,inRight) = x2 * Mom(1:4,inRight)
+      
+      call NNevolvePDF(x1,PDFScale,NNpdf(1,-6:7))
+      call NNevolvePDF(x2,PDFScale,NNpdf(2,-6:7))
+      
+      Res = 0d0
+      call EvalAmp_GB_TWMH(Mom,TTBHcoupl,TopDecays,LO_Res_Unpol)
+      Res = Res &
+            + LO_Res_Unpol(pdfGlu_,Bot_)   *  NNpdf(1,pdfGlu_)*NNpdf(2,Bot_)     &
+            + LO_Res_Unpol(Bot_,pdfGlu_)   *  NNpdf(1,Bot_)*NNpdf(2,pdfGlu_)
+
+      Res = Res/x1/x2/(2d0*E_CMS**2)
+            
+!     restore incoming momenta (in all-outgoing convention)
+      Mom(1,1:2) = -0.5d0*Collider_Energy
+      Mom(4,1)   = -0.5d0*Collider_Energy * sign(1d0,Mom(4,2))
+      Mom(4,2)   = +0.5d0*Collider_Energy * sign(1d0,Mom(4,2))
+  
+RETURN
+END SUBROUTINE
+
+
+
+      
+SUBROUTINE EvalXSec_PP_TBWPH(Mom,TTBHcoupl,TopDecays,Res)
+implicit none
+real(8) :: Mom(1:4,1:11),Res
+complex(8) :: TTBHcoupl(1:2)
+integer :: TopDecays! 0=stable, 1=di-leptonic
+real(8) :: Etot,Pztot
+real(8) :: x1,x2,PDFScale,Collider_Energy,E_CMS
+real(8) :: NNpdf(1:2,-6:7),LO_Res_Unpol(-6:6,-6:6)
+integer, parameter :: inLeft=1,inRight=2,Hbos=3,t=4, qout=5, b=6,W=7,lep=8,nu=9, lepW=10, nuW=11
+include 'includeVars.F90'
+      
+
+      
+      Collider_Energy = -(Mom(1,inLeft)+Mom(1,inRight))
+      if( TopDecays.eq.0 ) then
+          Etot = Mom(1,Hbos)+Mom(1,t)+Mom(1,qout)
+          Pztot= Mom(4,Hbos)+Mom(4,t)+Mom(4,qout)
+      else
+          Etot = Mom(1,Hbos) + Mom(1,lepW) + Mom(1,nuW) + Mom(1,b)+Mom(1,lep)+Mom(1,nu)
+          Pztot= Mom(4,Hbos) + Mom(4,lepW) + Mom(4,nuW) + Mom(4,b)+Mom(4,lep)+Mom(4,nu)
+      endif
+      x1 = (Etot+Pztot * sign(1d0,Mom(4,inRight)) )/Collider_Energy
+      x2 = (Etot-Pztot * sign(1d0,Mom(4,inRight)) )/Collider_Energy
+      E_CMS = dsqrt(x1*x2)*Collider_Energy
+      PDFScale = 0.25d0*( m_Top + m_Reso ) * 100d0
+
+      Mom(1:4,inLeft)  = x1 * Mom(1:4,inLeft)
+      Mom(1:4,inRight) = x2 * Mom(1:4,inRight)
+      
+      call NNevolvePDF(x1,PDFScale,NNpdf(1,-6:7))
+      call NNevolvePDF(x2,PDFScale,NNpdf(2,-6:7))
+      
+      Res = 0d0
+      call EvalAmp_GBB_TBWPH(Mom,TTBHcoupl,TopDecays,LO_Res_Unpol)
+      Res = Res &
+            + LO_Res_Unpol(pdfGlu_,ABot_)   *  NNpdf(1,pdfGlu_)*NNpdf(2,ABot_)     &
+            + LO_Res_Unpol(ABot_,pdfGlu_)   *  NNpdf(1,ABot_)*NNpdf(2,pdfGlu_)
+
+      Res = Res/x1/x2/(2d0*E_CMS**2)
+            
 !     restore incoming momenta (in all-outgoing convention)
       Mom(1,1:2) = -0.5d0*Collider_Energy
       Mom(4,1)   = -0.5d0*Collider_Energy * sign(1d0,Mom(4,2))
@@ -525,7 +628,153 @@ include 'includeVars.F90'
 RETURN
 END SUBROUTINE   
    
-   
+!tw channel   
+!Till: all outgoing   
+SUBROUTINE EvalAmp_GB_TWMH(MomExt,TTBHcoupl,TopDecays,LO_Res_Unpol)
+implicit none
+integer :: TopDecays! 0=stable, 1=di-leptonic
+real(8) :: MomExt(1:4,1:11),LO_Res_UnPol(-6:6,-6:6)
+complex(8) :: LOAmpab=0d0, LOAmpba=0d0
+
+complex(8) :: UBbD(4),UBbD2(4),Eg(4),Eg2(4),UBtD(4),ECw(4)
+complex(8) :: TTBHcoupl(1:2)
+integer, parameter :: iL=1,iR=2, H=3, t=4, w=5, bt=6,Wt=7,lept=8,nut=9, lepW=10,nuW=11
+integer :: i,j,bhel,thel,gpol,wpol,theld=-1,wpold=-1
+real(8), parameter :: sqrt2 = 1.4142135623730950488016887242096980786d0
+include 'includeVars.F90'
+
+!outgoing->incoming
+      MomExt(:,iL:iR)=-MomExt(:,iL:iR)
+
+      LO_Res_UnPol=0d0
+      
+      do bhel=-1,1,2
+        call ubarSpi_Dirac(dcmplx(MomExt(:,iR)),0d0,bhel,UBbD) 
+        call ubarSpi_Dirac(dcmplx(MomExt(:,iL)),0d0,bhel,UBbD2)  
+        
+        
+        do gpol=-1,1,2  
+
+          Eg=pol_mless(dcmplx(MomExt(:,iL)),gpol,.false.)
+          Eg2=pol_mless(dcmplx(MomExt(:,iR)),gpol,.false.)
+                          
+                                
+          if( TOPDECAYS .EQ. 0 ) then 
+            theld=+1
+            wpold=+1
+          endif     
+          do wpol=-1,wpold,1
+            if( TOPDECAYS .EQ. 0 ) then 
+              ECw=pol_mass(dcmplx(MomExt(:,w)),wpol,.true.)                
+            elseif( TOPDECAYS .NE. 0 ) then
+              call WDecay(Wm_,(/MomExt(1:4,lepW),MomExt(1:4,nuW)/),ECw)
+              ECw=ECw/sqrt2      
+            endif          
+            do thel=-1,theld,2   
+               
+              if( TOPDECAYS .EQ. 0 ) then 
+                call ubarSpi_Dirac(dcmplx(MomExt(:,t)),M_Top,thel,UBtD) 
+              elseif( TOPDECAYS .NE. 0 ) then
+                call TopDecay(Top_,(/MomExt(1:4,bt),MomExt(1:4,lept),MomExt(1:4,nut)/),UBtD)
+                UBtD=UBtD/sqrt2
+              endif  
+                  
+
+
+              call gb_twmHamp(MomExt(1:4,iL),Eg,MomExt(1:4,iR),UBbD,MomExt(1:4,t),UBtD,MomExt(1:4,w),ECw,MomExt(1:4,H),TTBHcoupl,LOAmpab)
+                        
+              LO_Res_Unpol(0,6) = LO_Res_Unpol(0,6) + cdabs(LOAmpab)**2
+
+                
+                
+              call gb_twmHamp(MomExt(1:4,iR),Eg2,MomExt(1:4,iL),UBbD2,MomExt(1:4,t),UBtD,MomExt(1:4,w),ECw,MomExt(1:4,H),TTBHcoupl,LOAmpba)
+
+
+              LO_Res_Unpol(6,0) = LO_Res_Unpol(6,0) + cdabs(LOAmpba)**2
+                
+            enddo
+          enddo 
+        enddo
+        
+
+      enddo
+
+        LO_Res_Unpol(:,:) = LO_Res_Unpol(:,:)*1d0/2d0*1d0/2d0*1d0/8d0*(4d0/3d0) !* ColFac * SpinAvg * QuarkColAvg**2
+      
+
+RETURN
+END SUBROUTINE EvalAmp_GB_TWMH
+
+!tw channel   
+!Till: all outgoing
+SUBROUTINE EvalAmp_GBB_TBWPH(MomExt,TTBHcoupl,TopDecays,LO_Res_Unpol)
+implicit none
+integer :: TopDecays! 0=stable, 1=di-leptonic
+real(8) :: MomExt(1:4,1:11),LO_Res_UnPol(-6:6,-6:6)
+complex(8) :: LOAmpab=0d0, LOAmpba=0d0
+
+complex(8) :: UBbD(4),UBbD2(4),Eg(4),Eg2(4),UBtD(4),ECw(4)
+complex(8) :: TTBHcoupl(1:2)
+integer, parameter :: iL=1,iR=2, H=3, t=4, w=5, bt=6,Wt=7,lept=8,nut=9, lepW=10,nuW=11
+integer :: i,j,bhel,thel,gpol,wpol,theld=-1,wpold=-1
+real(8), parameter :: sqrt2 = 1.4142135623730950488016887242096980786d0
+include 'includeVars.F90'
+
+!outgoing->incoming
+      MomExt(:,iL:iR)=-MomExt(:,iL:iR)
+      
+      LO_Res_UnPol=0d0
+      
+      do bhel=-1,1,2
+        call vSpi_Dirac(dcmplx(MomExt(:,iR)),0d0,bhel,VbD)       
+        call vSpi_Dirac(dcmplx(MomExt(:,iL)),0d0,bhel,VbD2)  
+                                                                           
+        do gpol=-1,1,2  
+
+          Eg=pol_mless(dcmplx(MomExt(:,iL)),gpol,.false.)
+          Eg2=pol_mless(dcmplx(MomExt(:,iR)),gpol,.false.)
+                        
+                                 
+          if( TOPDECAYS .EQ. 0 ) then  
+            theld=+1
+            wpold=+1
+          endif    
+          do wpol=-1,wpold,1         
+
+            if( TOPDECAYS .EQ. 0 ) then  
+              ECw=pol_mass(dcmplx(MomExt(:,w)),wpol,.true.) 
+            elseif( TOPDECAYS .NE. 0 ) then
+              call WDecay(Wp_,(/MomExt(1:4,lepW),MomExt(1:4,nuW)/),ECw)               
+              ECw=ECw/sqrt2       
+            endif  
+                      
+            do thel=-1,theld,2   
+    
+              if( TOPDECAYS .EQ. 0 ) then  
+                call vSpi_Dirac(dcmplx(MomExt(:,t)),M_Top,thel,VtD) 
+              elseif( TOPDECAYS .NE. 0 ) then
+                call TopDecay(ATop_,(/MomExt(1:4,bt),MomExt(1:4,lept),MomExt(1:4,nut)/),VtD)
+                VtD=VtD/sqrt2  
+              endif  
+
+              call gbb_tbwpHamp(MomExt(1:4,iL),Eg,MomExt(1:4,iR),VbD,MomExt(1:4,t),VtD,MomExt(1:4,w),ECw,MomExt(1:4,H),TTBHcoupl,LOampab)
+              
+              LO_Res_Unpol(0,-6) = LO_Res_Unpol(0,-6) + cdabs(LOAmpab)**2
+                
+                
+              call gbb_tbwpHamp(MomExt(1:4,iR),Eg2,MomExt(1:4,iL),VbD2,MomExt(1:4,t),VtD,MomExt(1:4,w),ECw,MomExt(1:4,H),TTBHcoupl,LOampba)
+
+              LO_Res_Unpol(-6,0) = LO_Res_Unpol(-6,0) + cdabs(LOAmpba)**2
+                
+            enddo
+          enddo 
+        enddo
+      enddo
+
+      LO_Res_Unpol(:,:) = LO_Res_Unpol(:,:)*1d0/2d0*1d0/2d0*1d0/8d0*(4d0/3d0) !* ColFac * SpinAvg * QuarkColAvg**2
+
+RETURN
+END SUBROUTINE EvalAmp_GBB_TBWPH   
    
    
    
@@ -885,7 +1134,7496 @@ subroutine spinoru(N,p,za,zb,s)
       enddo
 
     end subroutine spinoru
+    
+    
+          subroutine ubarSpi_Dirac(p,m,i,f)
+          implicit none
+          integer i
+          real(8) m
+          complex(8) p(4)
+          complex(8) f(4),fc
+          real(8)  p0,px,py,pz,fc2
 
+          p0=dreal(p(1))
+          px=dreal(p(2))
+          py=dreal(p(3))
+          pz=dreal(p(4))
+
+          fc2=p0+m
+          fc=cdsqrt( dcmplx(fc2))
+!           fc=dsqrt(fc2)
+
+          if (i.eq.1) then
+            f(1)=fc
+            f(2)=dcmplx(0d0,0d0)
+            f(3)=-1d0*pz*fc/fc2
+            f(4)=-(px-(0d0,1d0)*py)*fc/fc2
+          elseif (i.eq.-1) then
+            f(1)=dcmplx(0d0,0d0)
+            f(2)=fc
+            f(3)=-(px+(0d0,1d0)*py)*fc/fc2
+            f(4)=pz*fc/fc2
+          else
+              print *, "wrong helicity setting in ubarSpi"
+              stop
+          endif
+
+          return
+          end subroutine
+
+
+
+      subroutine gb_twmHamp(Pg,Eg,Pb,UBb,Pt,UBt,Pw,ECw,Ph,TTBHcoupl,amp)
+! amplitude for production g(Pg)+b(Pb)->t(Pt)+wm(Pw)+h(Ph)
+! allowing for scalar & pseudoscalar couplings of Higgs to top (Spinors and Pol-Vectors in Dirac representation!)
+        implicit none
+        real(8)    :: Pg(4),Pb(4),Pt(4),Pw(4),Ph(4)
+        complex(8) :: UBb(4),Eg(4),UBt(4),ECw(4)
+        complex(8) :: amp,ampts,ampws,amptt1,amptt2,ampwt
+        real(8)    :: mt,mw,v
+        complex(8)    :: kap,kapt,a1WW,a2WW,a4WW   
+        complex(8) TTBHcoupl(1:2)
+        include 'includeVars.F90'            
+
+
+        mw=M_W
+        mt=m_Top
+        v=vev
+        
+        kap=TTBHcoupl(1)
+        kapt=TTBHcoupl(2)
+        a1WW=(2d0,0d0)
+        a2WW=(0d0,0d0)
+        a4WW=(0d0,0d0)
+        
+
+        ampts = -((gs*mw*(-(DCONJG(UBb(2))*(Eg(1)*((Pb(1) + Pg(1))*(mt*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) +&
+     &   (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + mt*(ECw(1) - ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) + (Pb(4) +&
+     &   Pg(4))*(mt*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(1) -&
+     &   ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) +&
+     &   dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(2) - dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) -&
+     &   (Pb(2) + Pg(2) - dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*(mt*(ECw(1) + ECw(4))*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) +&
+     &   Eg(4)*(-((Pb(1) + Pg(1))*(mt*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + mt*(ECw(1) - ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) - (Pb(4) +&
+     &   Pg(4))*(mt*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(1) -&
+     &   ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) +&
+     &   dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(2) - dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) +&
+     &   (Pb(2) + Pg(2) - dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*(mt*(ECw(1) + ECw(4))*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) +&
+     &   (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(-((Pb(2) + Pg(2) + dcmplx(0d0,1d0)*(Pb(3) +&
+     &   Pg(3)))*(mt*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(1) -&
+     &   ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) +&
+     &   dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(2) - dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) +&
+     &   (Pb(1) + Pg(1))*(mt*(ECw(1) + ECw(4))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) - (Pb(4) +&
+     &   Pg(4))*(mt*(ECw(1) + ECw(4))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))))) -&
+     &   DCONJG(UBb(4))*(Eg(1)*((Pb(1) + Pg(1))*(mt*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + mt*(ECw(1) - ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) + (Pb(4) +&
+     &   Pg(4))*(mt*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(1) -&
+     &   ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) +&
+     &   dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(2) - dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) -&
+     &   (Pb(2) + Pg(2) - dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*(mt*(ECw(1) + ECw(4))*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) +&
+     &   Eg(4)*(-((Pb(1) + Pg(1))*(mt*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + mt*(ECw(1) - ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) - (Pb(4) +&
+     &   Pg(4))*(mt*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(1) -&
+     &   ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) +&
+     &   dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(2) - dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) +&
+     &   (Pb(2) + Pg(2) - dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*(mt*(ECw(1) + ECw(4))*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) +&
+     &   (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(-((Pb(2) + Pg(2) + dcmplx(0d0,1d0)*(Pb(3) +&
+     &   Pg(3)))*(mt*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(1) -&
+     &   ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) +&
+     &   dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(2) - dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) +&
+     &   (Pb(1) + Pg(1))*(mt*(ECw(1) + ECw(4))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) - (Pb(4) +&
+     &   Pg(4))*(mt*(ECw(1) + ECw(4))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))))) -&
+     &   DCONJG(UBb(1))*(-((Eg(2) + dcmplx(0d0,1d0)*Eg(3))*(-((Pb(1) + Pg(1))*(mt*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) +&
+     &   (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + mt*(ECw(1) - ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) - (Pb(4) +&
+     &   Pg(4))*(mt*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(1) -&
+     &   ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) +&
+     &   dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(2) - dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) +&
+     &   (Pb(2) + Pg(2) - dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*(mt*(ECw(1) + ECw(4))*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))))&
+     &   + Eg(1)*(-((Pb(2) + Pg(2) + dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*(mt*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) +&
+     &   (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + mt*(ECw(1) - ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) + (Pb(1) +&
+     &   Pg(1))*(mt*(ECw(1) + ECw(4))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) - (Pb(4) +&
+     &   Pg(4))*(mt*(ECw(1) + ECw(4))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) + Eg(4)*(-((Pb(2) + Pg(2)&
+     &   + dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*(mt*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + mt*(ECw(1) - ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) + (Pb(1) +&
+     &   Pg(1))*(mt*(ECw(1) + ECw(4))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) - (Pb(4) +&
+     &   Pg(4))*(mt*(ECw(1) + ECw(4))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))))) -&
+     &   DCONJG(UBb(3))*(-((Eg(2) + dcmplx(0d0,1d0)*Eg(3))*(-((Pb(1) + Pg(1))*(mt*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) +&
+     &   (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + mt*(ECw(1) - ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) - (Pb(4) +&
+     &   Pg(4))*(mt*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(1) -&
+     &   ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) +&
+     &   dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(2) - dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) +&
+     &   (Pb(2) + Pg(2) - dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*(mt*(ECw(1) + ECw(4))*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))))&
+     &   + Eg(1)*(-((Pb(2) + Pg(2) + dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*(mt*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) +&
+     &   (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + mt*(ECw(1) - ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) + (Pb(1) +&
+     &   Pg(1))*(mt*(ECw(1) + ECw(4))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) - (Pb(4) +&
+     &   Pg(4))*(mt*(ECw(1) + ECw(4))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) + Eg(4)*(-((Pb(2) + Pg(2)&
+     &   + dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*(mt*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(ECw(1) - ECw(4))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + mt*(ECw(1) - ECw(4))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) + (Pb(1) +&
+     &   Pg(1))*(mt*(ECw(1) + ECw(4))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) - (Pb(4) +&
+     &   Pg(4))*(mt*(ECw(1) + ECw(4))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + mt*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (ECw(1) + ECw(4))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) -&
+     &   kapt*mt*UBt(4))))))))/(sqrt2*v**2*(-(Pb(1) + Pg(1))**2 + (Pb(2) + Pg(2))**2 +&
+     &   (Pb(3) + Pg(3))**2 + (Pb(4) + Pg(4))**2)*(mt**2 - (Ph(1) + Pt(1))**2 + (Ph(2) +&
+     &   Pt(2))**2 + (Ph(3) + Pt(3))**2 + (Ph(4) + Pt(4))**2)))
+
+        ampws = (dcmplx(0d0,-1d0)*gs*mw*(DCONJG(UBb(1))*(Eg(1)*((Pb(1) +&
+     &   Pg(1))*((a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) +&
+     &   (a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4)) - (Pb(4) +&
+     &   Pg(4))*((a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) +&
+     &   (a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4)) - (Pb(2) + Pg(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   2*a2WW*(Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4))) +&
+     &   Eg(4)*((Pb(1) + Pg(1))*((a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) +&
+     &   (a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4)) - (Pb(4) +&
+     &   Pg(4))*((a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) +&
+     &   (a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4)) - (Pb(2) + Pg(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   2*a2WW*(Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4))) -&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((Pb(2) + Pg(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   Pg(3)))*((a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) +&
+     &   (a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4)) - (Pb(1) +&
+     &   Pg(1))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4)) - (Pb(4)&
+     &   + Pg(4))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4)))) +&
+     &   DCONJG(UBb(3))*(Eg(1)*((Pb(1) + Pg(1))*((a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) +&
+     &   Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1))&
+     &   + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) +&
+     &   (a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4)) - (Pb(4) +&
+     &   Pg(4))*((a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) +&
+     &   (a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4)) - (Pb(2) + Pg(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   2*a2WW*(Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4))) +&
+     &   Eg(4)*((Pb(1) + Pg(1))*((a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) +&
+     &   (a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4)) - (Pb(4) +&
+     &   Pg(4))*((a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) +&
+     &   (a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4)) - (Pb(2) + Pg(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   2*a2WW*(Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4))) -&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((Pb(2) + Pg(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   Pg(3)))*((a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) +&
+     &   (a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4)) - (Pb(1) +&
+     &   Pg(1))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4)) - (Pb(4)&
+     &   + Pg(4))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4)))) +&
+     &   DCONJG(UBb(2))*((Eg(2) - dcmplx(0d0,1d0)*Eg(3))*((Pb(1) + Pg(1))*((a1WW*mw**2*(ECw(1)&
+     &   + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4)) - (Pb(4) +&
+     &   Pg(4))*((a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) +&
+     &   (a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4)) - (Pb(2) + Pg(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   2*a2WW*(Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4))) +&
+     &   Eg(4)*((Pb(2) + Pg(2) - dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*((a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4)) - (Pb(1) +&
+     &   Pg(1))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4)) - (Pb(4)&
+     &   + Pg(4))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4))) +&
+     &   Eg(1)*(-((Pb(2) + Pg(2) - dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*((a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4))) + (Pb(1) +&
+     &   Pg(1))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4)) + (Pb(4)&
+     &   + Pg(4))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4)))) +&
+     &   DCONJG(UBb(4))*((Eg(2) - dcmplx(0d0,1d0)*Eg(3))*((Pb(1) + Pg(1))*((a1WW*mw**2*(ECw(1)&
+     &   + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4)) - (Pb(4) +&
+     &   Pg(4))*((a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) +&
+     &   (a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4)) - (Pb(2) + Pg(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   2*a2WW*(Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4))) +&
+     &   Eg(4)*((Pb(2) + Pg(2) - dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*((a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4)) - (Pb(1) +&
+     &   Pg(1))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4)) - (Pb(4)&
+     &   + Pg(4))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4))) +&
+     &   Eg(1)*(-((Pb(2) + Pg(2) - dcmplx(0d0,1d0)*(Pb(3) + Pg(3)))*((a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(1) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(2) + (a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*UBt(3) + (a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) + dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(4))) + (Pb(1) +&
+     &   Pg(1))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(4)) + (Pb(4)&
+     &   + Pg(4))*((a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(1) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))*UBt(2) +&
+     &   (a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))))*UBt(3) + (a1WW*mw**2*(ECw(1) -&
+     &   ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) +&
+     &   Pw(4)))))*UBt(4))))))/(sqrt2*v**2*(-(Pb(1) + Pg(1))**2 + (Pb(2) + Pg(2))**2 +&
+     &   (Pb(3) + Pg(3))**2 + (Pb(4) + Pg(4))**2)*(mw**2 - (Ph(1) + Pw(1))**2 + (Ph(2) +&
+     &   Pw(2))**2 + (Ph(3) + Pw(3))**2 + (Ph(4) + Pw(4))**2))
+
+        amptt1 = (dcmplx(0d0,-1d0)*gs*mt*mw*(DCONJG(UBb(1))*((ECw(1) + ECw(4))*((Pb(4) -&
+     &   Pw(4))*(-(kap*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3))) + dcmplx(0d0,1d0)*kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) +&
+     &   kapt*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) - dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kapt*(mt&
+     &   - Pg(1) + Pt(1))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - dcmplx(0d0,1d0)*(mt + Pb(1) -&
+     &   Pw(1))*(kapt*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + dcmplx(0d0,1d0)*kap*(Pg(4) -&
+     &   Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) - dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kap*(mt&
+     &   - Pg(1) + Pt(1))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(4) - Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - dcmplx(0d0,1d0)*(Pb(2) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) - Pw(3)))*(-(kapt*(Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) +&
+     &   Eg(1)*UBt(3))) - dcmplx(0d0,1d0)*kap*(mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) + Pg(3) - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(1)*UBt(1) +&
+     &   Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(mt - Pg(1) +&
+     &   Pt(1))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4)) -&
+     &   dcmplx(0d0,1d0)*kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4)))) + (ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(-(kap*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3))) + dcmplx(0d0,1d0)*kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) +&
+     &   kapt*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) - dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kapt*(mt&
+     &   - Pg(1) + Pt(1))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + dcmplx(0d0,1d0)*(Pb(4) -&
+     &   Pw(4))*(-(kapt*(Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) +&
+     &   Eg(1)*UBt(3))) - dcmplx(0d0,1d0)*kap*(mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) + Pg(3) - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(1)*UBt(1) +&
+     &   Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(mt - Pg(1) +&
+     &   Pt(1))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4)) -&
+     &   dcmplx(0d0,1d0)*kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - dcmplx(0d0,1d0)*(mt + Pb(1) -&
+     &   Pw(1))*(kapt*((mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) -&
+     &   Eg(4)*UBt(2) + Eg(1)*UBt(4)) - (Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + (Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + kap*((dcmplx(0d0,1d0)*Pg(2) + Pg(3) -&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) - dcmplx(0d0,1d0)*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   (mt - Pg(1) + Pt(1))*(dcmplx(0d0,1d0)*Eg(1)*UBt(2) + dcmplx(0d0,1d0)*Eg(2)*UBt(3) +&
+     &   Eg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(4)*UBt(4))))) + (ECw(1) + ECw(4))*((mt - Pb(1) +&
+     &   Pw(1))*(-(kap*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3))) + dcmplx(0d0,1d0)*kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) +&
+     &   kapt*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) - dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kapt*(mt&
+     &   - Pg(1) + Pt(1))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + dcmplx(0d0,1d0)*(Pb(4) -&
+     &   Pw(4))*(kapt*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + dcmplx(0d0,1d0)*kap*(Pg(4) -&
+     &   Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) - dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kap*(mt&
+     &   - Pg(1) + Pt(1))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(4) - Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + dcmplx(0d0,1d0)*(Pb(2) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) - Pw(3)))*(kapt*((mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) - (Pg(2) -&
+     &   dcmplx(0d0,1d0)*Pg(3) - Pt(2) + dcmplx(0d0,1d0)*Pt(3))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + (Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3)&
+     &   - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + kap*((dcmplx(0d0,1d0)*Pg(2) + Pg(3)&
+     &   - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) - dcmplx(0d0,1d0)*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   (mt - Pg(1) + Pt(1))*(dcmplx(0d0,1d0)*Eg(1)*UBt(2) + dcmplx(0d0,1d0)*Eg(2)*UBt(3) +&
+     &   Eg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(4)*UBt(4))))) + dcmplx(0d0,1d0)*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(kapt*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + dcmplx(0d0,1d0)*kap*(Pg(4) -&
+     &   Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) - dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kap*(mt&
+     &   - Pg(1) + Pt(1))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(4) - Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - (mt - Pb(1) + Pw(1))*(-(kapt*(Pg(2) -&
+     &   dcmplx(0d0,1d0)*Pg(3) - Pt(2) + dcmplx(0d0,1d0)*Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3))) - dcmplx(0d0,1d0)*kap*(mt + Pg(1) -&
+     &   Pt(1))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   kapt*(Pg(4) - Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) +&
+     &   Eg(1)*UBt(4)) + kap*(dcmplx(0d0,1d0)*Pg(2) + Pg(3) - dcmplx(0d0,1d0)*Pt(2) -&
+     &   Pt(3))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) -&
+     &   kapt*(mt - Pg(1) + Pt(1))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3)&
+     &   - Eg(4)*UBt(4)) - dcmplx(0d0,1d0)*kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - (Pb(4) - Pw(4))*(kapt*((mt + Pg(1) -&
+     &   Pt(1))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) -&
+     &   (Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) + dcmplx(0d0,1d0)*Pt(3))*(Eg(1)*UBt(1) +&
+     &   Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + (Pg(4) - Pt(4))*(Eg(1)*UBt(2)&
+     &   + Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) +&
+     &   kap*((dcmplx(0d0,1d0)*Pg(2) + Pg(3) - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(4)*UBt(1) +&
+     &   Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) - dcmplx(0d0,1d0)*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   (mt - Pg(1) + Pt(1))*(dcmplx(0d0,1d0)*Eg(1)*UBt(2) + dcmplx(0d0,1d0)*Eg(2)*UBt(3) +&
+     &   Eg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(4)*UBt(4)))))) + DCONJG(UBb(3))*((ECw(1) +&
+     &   ECw(4))*((Pb(4) - Pw(4))*(-(kap*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3))) + dcmplx(0d0,1d0)*kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) +&
+     &   kapt*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) - dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kapt*(mt&
+     &   - Pg(1) + Pt(1))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - dcmplx(0d0,1d0)*(mt + Pb(1) -&
+     &   Pw(1))*(kapt*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + dcmplx(0d0,1d0)*kap*(Pg(4) -&
+     &   Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) - dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kap*(mt&
+     &   - Pg(1) + Pt(1))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(4) - Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - dcmplx(0d0,1d0)*(Pb(2) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) - Pw(3)))*(-(kapt*(Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) +&
+     &   Eg(1)*UBt(3))) - dcmplx(0d0,1d0)*kap*(mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) + Pg(3) - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(1)*UBt(1) +&
+     &   Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(mt - Pg(1) +&
+     &   Pt(1))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4)) -&
+     &   dcmplx(0d0,1d0)*kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4)))) + (ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(-(kap*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3))) + dcmplx(0d0,1d0)*kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) +&
+     &   kapt*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) - dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kapt*(mt&
+     &   - Pg(1) + Pt(1))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + dcmplx(0d0,1d0)*(Pb(4) -&
+     &   Pw(4))*(-(kapt*(Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) +&
+     &   Eg(1)*UBt(3))) - dcmplx(0d0,1d0)*kap*(mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) + Pg(3) - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(1)*UBt(1) +&
+     &   Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(mt - Pg(1) +&
+     &   Pt(1))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4)) -&
+     &   dcmplx(0d0,1d0)*kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - dcmplx(0d0,1d0)*(mt + Pb(1) -&
+     &   Pw(1))*(kapt*((mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) -&
+     &   Eg(4)*UBt(2) + Eg(1)*UBt(4)) - (Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + (Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + kap*((dcmplx(0d0,1d0)*Pg(2) + Pg(3) -&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) - dcmplx(0d0,1d0)*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   (mt - Pg(1) + Pt(1))*(dcmplx(0d0,1d0)*Eg(1)*UBt(2) + dcmplx(0d0,1d0)*Eg(2)*UBt(3) +&
+     &   Eg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(4)*UBt(4))))) + (ECw(1) + ECw(4))*((mt - Pb(1) +&
+     &   Pw(1))*(-(kap*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3))) + dcmplx(0d0,1d0)*kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) +&
+     &   kapt*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) - dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kapt*(mt&
+     &   - Pg(1) + Pt(1))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + dcmplx(0d0,1d0)*(Pb(4) -&
+     &   Pw(4))*(kapt*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + dcmplx(0d0,1d0)*kap*(Pg(4) -&
+     &   Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) - dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kap*(mt&
+     &   - Pg(1) + Pt(1))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(4) - Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + dcmplx(0d0,1d0)*(Pb(2) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) - Pw(3)))*(kapt*((mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) - (Pg(2) -&
+     &   dcmplx(0d0,1d0)*Pg(3) - Pt(2) + dcmplx(0d0,1d0)*Pt(3))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + (Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3)&
+     &   - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + kap*((dcmplx(0d0,1d0)*Pg(2) + Pg(3)&
+     &   - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) - dcmplx(0d0,1d0)*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   (mt - Pg(1) + Pt(1))*(dcmplx(0d0,1d0)*Eg(1)*UBt(2) + dcmplx(0d0,1d0)*Eg(2)*UBt(3) +&
+     &   Eg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(4)*UBt(4))))) + dcmplx(0d0,1d0)*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(kapt*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + dcmplx(0d0,1d0)*kap*(Pg(4) -&
+     &   Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) - dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kap*(mt&
+     &   - Pg(1) + Pt(1))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(4) - Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - (mt - Pb(1) + Pw(1))*(-(kapt*(Pg(2) -&
+     &   dcmplx(0d0,1d0)*Pg(3) - Pt(2) + dcmplx(0d0,1d0)*Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3))) - dcmplx(0d0,1d0)*kap*(mt + Pg(1) -&
+     &   Pt(1))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   kapt*(Pg(4) - Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) +&
+     &   Eg(1)*UBt(4)) + kap*(dcmplx(0d0,1d0)*Pg(2) + Pg(3) - dcmplx(0d0,1d0)*Pt(2) -&
+     &   Pt(3))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) -&
+     &   kapt*(mt - Pg(1) + Pt(1))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3)&
+     &   - Eg(4)*UBt(4)) - dcmplx(0d0,1d0)*kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - (Pb(4) - Pw(4))*(kapt*((mt + Pg(1) -&
+     &   Pt(1))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) -&
+     &   (Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) + dcmplx(0d0,1d0)*Pt(3))*(Eg(1)*UBt(1) +&
+     &   Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + (Pg(4) - Pt(4))*(Eg(1)*UBt(2)&
+     &   + Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) +&
+     &   kap*((dcmplx(0d0,1d0)*Pg(2) + Pg(3) - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(4)*UBt(1) +&
+     &   Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) - dcmplx(0d0,1d0)*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   (mt - Pg(1) + Pt(1))*(dcmplx(0d0,1d0)*Eg(1)*UBt(2) + dcmplx(0d0,1d0)*Eg(2)*UBt(3) +&
+     &   Eg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(4)*UBt(4)))))) + DCONJG(UBb(2))*((ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((Pb(4) - Pw(4))*(-(kap*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) +&
+     &   Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3))) +&
+     &   dcmplx(0d0,1d0)*kapt*(Pg(4) - Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + kapt*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) -&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) -&
+     &   Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kapt*(mt - Pg(1) + Pt(1))*(Eg(1)*UBt(1)&
+     &   + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(4) -&
+     &   Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) +&
+     &   kap*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) + dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) +&
+     &   Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - dcmplx(0d0,1d0)*(mt +&
+     &   Pb(1) - Pw(1))*(kapt*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + dcmplx(0d0,1d0)*kap*(Pg(4) -&
+     &   Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) - dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kap*(mt&
+     &   - Pg(1) + Pt(1))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(4) - Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - dcmplx(0d0,1d0)*(Pb(2) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) - Pw(3)))*(-(kapt*(Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) +&
+     &   Eg(1)*UBt(3))) - dcmplx(0d0,1d0)*kap*(mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) + Pg(3) - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(1)*UBt(1) +&
+     &   Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(mt - Pg(1) +&
+     &   Pt(1))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4)) -&
+     &   dcmplx(0d0,1d0)*kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4)))) + (ECw(1) - ECw(4))*((Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(-(kap*(mt + Pg(1) -&
+     &   Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3))) +&
+     &   dcmplx(0d0,1d0)*kapt*(Pg(4) - Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + kapt*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) -&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) -&
+     &   Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kapt*(mt - Pg(1) + Pt(1))*(Eg(1)*UBt(1)&
+     &   + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(4) -&
+     &   Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) +&
+     &   kap*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) + dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) +&
+     &   Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + dcmplx(0d0,1d0)*(Pb(4)&
+     &   - Pw(4))*(-(kapt*(Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) +&
+     &   Eg(1)*UBt(3))) - dcmplx(0d0,1d0)*kap*(mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) + Pg(3) - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(1)*UBt(1) +&
+     &   Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(mt - Pg(1) +&
+     &   Pt(1))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4)) -&
+     &   dcmplx(0d0,1d0)*kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - dcmplx(0d0,1d0)*(mt + Pb(1) -&
+     &   Pw(1))*(kapt*((mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) -&
+     &   Eg(4)*UBt(2) + Eg(1)*UBt(4)) - (Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + (Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + kap*((dcmplx(0d0,1d0)*Pg(2) + Pg(3) -&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) - dcmplx(0d0,1d0)*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   (mt - Pg(1) + Pt(1))*(dcmplx(0d0,1d0)*Eg(1)*UBt(2) + dcmplx(0d0,1d0)*Eg(2)*UBt(3) +&
+     &   Eg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(4)*UBt(4))))) + (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((mt - Pb(1) + Pw(1))*(-(kap*(mt + Pg(1) -&
+     &   Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3))) +&
+     &   dcmplx(0d0,1d0)*kapt*(Pg(4) - Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + kapt*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) -&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) -&
+     &   Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kapt*(mt - Pg(1) + Pt(1))*(Eg(1)*UBt(1)&
+     &   + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(4) -&
+     &   Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) +&
+     &   kap*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) + dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) +&
+     &   Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + dcmplx(0d0,1d0)*(Pb(4)&
+     &   - Pw(4))*(kapt*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + dcmplx(0d0,1d0)*kap*(Pg(4) -&
+     &   Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) - dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kap*(mt&
+     &   - Pg(1) + Pt(1))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(4) - Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + dcmplx(0d0,1d0)*(Pb(2) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) - Pw(3)))*(kapt*((mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) - (Pg(2) -&
+     &   dcmplx(0d0,1d0)*Pg(3) - Pt(2) + dcmplx(0d0,1d0)*Pt(3))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + (Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3)&
+     &   - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + kap*((dcmplx(0d0,1d0)*Pg(2) + Pg(3)&
+     &   - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) - dcmplx(0d0,1d0)*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   (mt - Pg(1) + Pt(1))*(dcmplx(0d0,1d0)*Eg(1)*UBt(2) + dcmplx(0d0,1d0)*Eg(2)*UBt(3) +&
+     &   Eg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(4)*UBt(4))))) + dcmplx(0d0,1d0)*(ECw(1) -&
+     &   ECw(4))*((Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(kapt*(mt +&
+     &   Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) +&
+     &   Eg(1)*UBt(3)) + dcmplx(0d0,1d0)*kap*(Pg(4) - Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + kap*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) -&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) -&
+     &   Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kap*(mt - Pg(1) + Pt(1))*(Eg(1)*UBt(1)&
+     &   + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) -&
+     &   kapt*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) + dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) +&
+     &   Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - (mt - Pb(1) +&
+     &   Pw(1))*(-(kapt*(Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) +&
+     &   Eg(1)*UBt(3))) - dcmplx(0d0,1d0)*kap*(mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) + Pg(3) - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(1)*UBt(1) +&
+     &   Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(mt - Pg(1) +&
+     &   Pt(1))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4)) -&
+     &   dcmplx(0d0,1d0)*kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - (Pb(4) - Pw(4))*(kapt*((mt + Pg(1) -&
+     &   Pt(1))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) -&
+     &   (Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) + dcmplx(0d0,1d0)*Pt(3))*(Eg(1)*UBt(1) +&
+     &   Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + (Pg(4) - Pt(4))*(Eg(1)*UBt(2)&
+     &   + Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) +&
+     &   kap*((dcmplx(0d0,1d0)*Pg(2) + Pg(3) - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(4)*UBt(1) +&
+     &   Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) - dcmplx(0d0,1d0)*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   (mt - Pg(1) + Pt(1))*(dcmplx(0d0,1d0)*Eg(1)*UBt(2) + dcmplx(0d0,1d0)*Eg(2)*UBt(3) +&
+     &   Eg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(4)*UBt(4)))))) + DCONJG(UBb(4))*((ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((Pb(4) - Pw(4))*(-(kap*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) +&
+     &   Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3))) +&
+     &   dcmplx(0d0,1d0)*kapt*(Pg(4) - Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + kapt*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) -&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) -&
+     &   Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kapt*(mt - Pg(1) + Pt(1))*(Eg(1)*UBt(1)&
+     &   + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(4) -&
+     &   Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) +&
+     &   kap*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) + dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) +&
+     &   Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - dcmplx(0d0,1d0)*(mt +&
+     &   Pb(1) - Pw(1))*(kapt*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + dcmplx(0d0,1d0)*kap*(Pg(4) -&
+     &   Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) - dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kap*(mt&
+     &   - Pg(1) + Pt(1))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(4) - Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - dcmplx(0d0,1d0)*(Pb(2) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) - Pw(3)))*(-(kapt*(Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) +&
+     &   Eg(1)*UBt(3))) - dcmplx(0d0,1d0)*kap*(mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) + Pg(3) - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(1)*UBt(1) +&
+     &   Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(mt - Pg(1) +&
+     &   Pt(1))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4)) -&
+     &   dcmplx(0d0,1d0)*kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4)))) + (ECw(1) - ECw(4))*((Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(-(kap*(mt + Pg(1) -&
+     &   Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3))) +&
+     &   dcmplx(0d0,1d0)*kapt*(Pg(4) - Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + kapt*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) -&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) -&
+     &   Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kapt*(mt - Pg(1) + Pt(1))*(Eg(1)*UBt(1)&
+     &   + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(4) -&
+     &   Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) +&
+     &   kap*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) + dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) +&
+     &   Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + dcmplx(0d0,1d0)*(Pb(4)&
+     &   - Pw(4))*(-(kapt*(Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) +&
+     &   Eg(1)*UBt(3))) - dcmplx(0d0,1d0)*kap*(mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) + Pg(3) - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(1)*UBt(1) +&
+     &   Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(mt - Pg(1) +&
+     &   Pt(1))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4)) -&
+     &   dcmplx(0d0,1d0)*kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - dcmplx(0d0,1d0)*(mt + Pb(1) -&
+     &   Pw(1))*(kapt*((mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) -&
+     &   Eg(4)*UBt(2) + Eg(1)*UBt(4)) - (Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + (Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + kap*((dcmplx(0d0,1d0)*Pg(2) + Pg(3) -&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) - dcmplx(0d0,1d0)*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   (mt - Pg(1) + Pt(1))*(dcmplx(0d0,1d0)*Eg(1)*UBt(2) + dcmplx(0d0,1d0)*Eg(2)*UBt(3) +&
+     &   Eg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(4)*UBt(4))))) + (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((mt - Pb(1) + Pw(1))*(-(kap*(mt + Pg(1) -&
+     &   Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3))) +&
+     &   dcmplx(0d0,1d0)*kapt*(Pg(4) - Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + kapt*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) -&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) -&
+     &   Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kapt*(mt - Pg(1) + Pt(1))*(Eg(1)*UBt(1)&
+     &   + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + kap*(Pg(4) -&
+     &   Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) +&
+     &   kap*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) + dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) +&
+     &   Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + dcmplx(0d0,1d0)*(Pb(4)&
+     &   - Pw(4))*(kapt*(mt + Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + dcmplx(0d0,1d0)*kap*(Pg(4) -&
+     &   Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) - dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kap*(mt&
+     &   - Pg(1) + Pt(1))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(4) - Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + dcmplx(0d0,1d0)*(Pb(2) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) - Pw(3)))*(kapt*((mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) - (Pg(2) -&
+     &   dcmplx(0d0,1d0)*Pg(3) - Pt(2) + dcmplx(0d0,1d0)*Pt(3))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) +&
+     &   (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + (Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3)&
+     &   - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) + kap*((dcmplx(0d0,1d0)*Pg(2) + Pg(3)&
+     &   - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) - dcmplx(0d0,1d0)*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   (mt - Pg(1) + Pt(1))*(dcmplx(0d0,1d0)*Eg(1)*UBt(2) + dcmplx(0d0,1d0)*Eg(2)*UBt(3) +&
+     &   Eg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(4)*UBt(4))))) + dcmplx(0d0,1d0)*(ECw(1) -&
+     &   ECw(4))*((Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(kapt*(mt +&
+     &   Pg(1) - Pt(1))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) +&
+     &   Eg(1)*UBt(3)) + dcmplx(0d0,1d0)*kap*(Pg(4) - Pt(4))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) + kap*(dcmplx(0d0,1d0)*Pg(2) - Pg(3) -&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) -&
+     &   Eg(4)*UBt(2) + Eg(1)*UBt(4)) + dcmplx(0d0,1d0)*kap*(mt - Pg(1) + Pt(1))*(Eg(1)*UBt(1)&
+     &   + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) -&
+     &   kapt*(Pg(2) + dcmplx(0d0,1d0)*(Pg(3) + dcmplx(0d0,1d0)*Pt(2) - Pt(3)))*(Eg(1)*UBt(2) +&
+     &   Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - (mt - Pb(1) +&
+     &   Pw(1))*(-(kapt*(Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) +&
+     &   Eg(1)*UBt(3))) - dcmplx(0d0,1d0)*kap*(mt + Pg(1) - Pt(1))*(Eg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) + kapt*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   kap*(dcmplx(0d0,1d0)*Pg(2) + Pg(3) - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(1)*UBt(1) +&
+     &   Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) - kapt*(mt - Pg(1) +&
+     &   Pt(1))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4)) -&
+     &   dcmplx(0d0,1d0)*kap*(Pg(4) - Pt(4))*(Eg(1)*UBt(2) + Eg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) - (Pb(4) - Pw(4))*(kapt*((mt + Pg(1) -&
+     &   Pt(1))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) -&
+     &   (Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) + dcmplx(0d0,1d0)*Pt(3))*(Eg(1)*UBt(1) +&
+     &   Eg(4)*UBt(3) + (Eg(2) + dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + (Pg(4) - Pt(4))*(Eg(1)*UBt(2)&
+     &   + Eg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*UBt(3) - Eg(4)*UBt(4))) +&
+     &   kap*((dcmplx(0d0,1d0)*Pg(2) + Pg(3) - dcmplx(0d0,1d0)*Pt(2) - Pt(3))*(Eg(4)*UBt(1) +&
+     &   Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) + Eg(1)*UBt(3)) - dcmplx(0d0,1d0)*(Pg(4) -&
+     &   Pt(4))*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) + Eg(1)*UBt(4)) +&
+     &   (mt - Pg(1) + Pt(1))*(dcmplx(0d0,1d0)*Eg(1)*UBt(2) + dcmplx(0d0,1d0)*Eg(2)*UBt(3) +&
+     &   Eg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(4)*UBt(4))))))))/(sqrt2*v**2*(mt**2 - (Pg(1) -&
+     &   Pt(1))**2 + (Pg(2) - Pt(2))**2 + (Pg(3) - Pt(3))**2 + (Pg(4) - Pt(4))**2)*(mt**2 -&
+     &   (Pb(1) - Pw(1))**2 + (Pb(2) - Pw(2))**2 + (Pb(3) - Pw(3))**2 + (Pb(4) - Pw(4))**2))
+     
+     amptt2 = (gs*mw*(-(DCONJG(UBb(2))*((ECw(1) - ECw(4))*(-((Pb(4) - Pw(4))*(mt*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) +&
+     &   (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*Eg(1)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1)&
+     &   + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + Eg(4)*(-(mt*(Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3))) + mt*(Ph(4) + Pt(4))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) -&
+     &   kapt*mt*UBt(4))))) + (Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(mt*Eg(4)*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(1)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) -&
+     &   (mt + Pb(1) - Pw(1))*(mt*Eg(1)*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) - mt*Eg(4)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) + (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((Pb(2) - Pw(2) + dcmplx(0d0,1d0)*(Pb(3) - Pw(3)))*(mt*(Eg(2)&
+     &   - dcmplx(0d0,1d0)*Eg(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) +&
+     &   (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*Eg(1)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1)&
+     &   + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + Eg(4)*(-(mt*(Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3))) + mt*(Ph(4) + Pt(4))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) -&
+     &   kapt*mt*UBt(4)))) + (Pb(4) - Pw(4))*(mt*Eg(4)*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(1)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) -&
+     &   (mt + Pb(1) - Pw(1))*(mt*Eg(1)*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + Eg(4)*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) + (ECw(1) - ECw(4))*((mt -&
+     &   Pb(1) + Pw(1))*(mt*(Eg(2) - dcmplx(0d0,1d0)*Eg(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*Eg(1)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(4)*(-(mt*(Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3))) +&
+     &   mt*(Ph(4) + Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) - (Pb(4) -&
+     &   Pw(4))*(mt*Eg(1)*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) - mt*Eg(4)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) + (Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(mt*Eg(1)*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(4)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) +&
+     &   (ECw(2) - dcmplx(0d0,1d0)*ECw(3))*((mt - Pb(1) + Pw(1))*(mt*Eg(4)*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + Eg(1)*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) + (Pb(2) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) - Pw(3)))*(mt*Eg(1)*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) - mt*Eg(4)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) + (Pb(4) -&
+     &   Pw(4))*(mt*Eg(1)*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt +&
+     &   Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(4)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))))))&
+     &   - DCONJG(UBb(4))*((ECw(1) - ECw(4))*(-((Pb(4) - Pw(4))*(mt*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) +&
+     &   (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*Eg(1)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1)&
+     &   + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + Eg(4)*(-(mt*(Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3))) + mt*(Ph(4) + Pt(4))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) -&
+     &   kapt*mt*UBt(4))))) + (Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(mt*Eg(4)*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(1)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) -&
+     &   (mt + Pb(1) - Pw(1))*(mt*Eg(1)*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) - mt*Eg(4)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) + (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((Pb(2) - Pw(2) + dcmplx(0d0,1d0)*(Pb(3) - Pw(3)))*(mt*(Eg(2)&
+     &   - dcmplx(0d0,1d0)*Eg(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) +&
+     &   (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*Eg(1)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1)&
+     &   + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + Eg(4)*(-(mt*(Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3))) + mt*(Ph(4) + Pt(4))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) -&
+     &   kapt*mt*UBt(4)))) + (Pb(4) - Pw(4))*(mt*Eg(4)*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(1)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) -&
+     &   (mt + Pb(1) - Pw(1))*(mt*Eg(1)*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + Eg(4)*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) + (ECw(1) - ECw(4))*((mt -&
+     &   Pb(1) + Pw(1))*(mt*(Eg(2) - dcmplx(0d0,1d0)*Eg(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*Eg(1)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(4)*(-(mt*(Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3))) +&
+     &   mt*(Ph(4) + Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) - (Pb(4) -&
+     &   Pw(4))*(mt*Eg(1)*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) - mt*Eg(4)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) + (Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(mt*Eg(1)*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(4)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) +&
+     &   (ECw(2) - dcmplx(0d0,1d0)*ECw(3))*((mt - Pb(1) + Pw(1))*(mt*Eg(4)*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + Eg(1)*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) + (Pb(2) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) - Pw(3)))*(mt*Eg(1)*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) - mt*Eg(4)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) + (Pb(4) -&
+     &   Pw(4))*(mt*Eg(1)*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt +&
+     &   Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(4)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))))&
+     &   - DCONJG(UBb(1))*((ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(-((Pb(4) - Pw(4))*(mt*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) +&
+     &   (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*Eg(1)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1)&
+     &   + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + Eg(4)*(-(mt*(Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3))) + mt*(Ph(4) + Pt(4))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) -&
+     &   kapt*mt*UBt(4))))) + (Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(mt*Eg(4)*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(1)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) -&
+     &   (mt + Pb(1) - Pw(1))*(mt*Eg(1)*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) - mt*Eg(4)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) + (ECw(1) +&
+     &   ECw(4))*((Pb(2) - Pw(2) + dcmplx(0d0,1d0)*(Pb(3) - Pw(3)))*(mt*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) +&
+     &   (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*Eg(1)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1)&
+     &   + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + Eg(4)*(-(mt*(Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3))) + mt*(Ph(4) + Pt(4))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) -&
+     &   kapt*mt*UBt(4)))) + (Pb(4) - Pw(4))*(mt*Eg(4)*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(1)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) -&
+     &   (mt + Pb(1) - Pw(1))*(mt*Eg(1)*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + Eg(4)*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) + (ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((mt - Pb(1) + Pw(1))*(mt*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) +&
+     &   (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*Eg(1)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1)&
+     &   + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + Eg(4)*(-(mt*(Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3))) + mt*(Ph(4) + Pt(4))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) -&
+     &   kapt*mt*UBt(4)))) - (Pb(4) - Pw(4))*(mt*Eg(1)*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3)&
+     &   + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) - mt*Eg(4)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) + (Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(mt*Eg(1)*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(4)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) +&
+     &   (ECw(1) + ECw(4))*((mt - Pb(1) + Pw(1))*(mt*Eg(4)*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(1)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) +&
+     &   (Pb(2) - Pw(2) + dcmplx(0d0,1d0)*(Pb(3) - Pw(3)))*(mt*Eg(1)*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) - mt*Eg(4)*((dcmplx(0d0,1d0)*Ph(2)&
+     &   + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) +&
+     &   (mt - Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) + (Pb(4) -&
+     &   Pw(4))*(mt*Eg(1)*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt +&
+     &   Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(4)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))))&
+     &   - DCONJG(UBb(3))*((ECw(2) + dcmplx(0d0,1d0)*ECw(3))*(-((Pb(4) - Pw(4))*(mt*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) +&
+     &   (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*Eg(1)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1)&
+     &   + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + Eg(4)*(-(mt*(Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3))) + mt*(Ph(4) + Pt(4))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) -&
+     &   kapt*mt*UBt(4))))) + (Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(mt*Eg(4)*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(1)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) -&
+     &   (mt + Pb(1) - Pw(1))*(mt*Eg(1)*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) - mt*Eg(4)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) + (ECw(1) +&
+     &   ECw(4))*((Pb(2) - Pw(2) + dcmplx(0d0,1d0)*(Pb(3) - Pw(3)))*(mt*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) +&
+     &   (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*Eg(1)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1)&
+     &   + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + Eg(4)*(-(mt*(Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3))) + mt*(Ph(4) + Pt(4))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) -&
+     &   kapt*mt*UBt(4)))) + (Pb(4) - Pw(4))*(mt*Eg(4)*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(1)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) -&
+     &   (mt + Pb(1) - Pw(1))*(mt*Eg(1)*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + Eg(4)*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) + (ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*((mt - Pb(1) + Pw(1))*(mt*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) +&
+     &   (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*Eg(1)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1)&
+     &   + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + Eg(4)*(-(mt*(Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3))) + mt*(Ph(4) + Pt(4))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) -&
+     &   kapt*mt*UBt(4)))) - (Pb(4) - Pw(4))*(mt*Eg(1)*((Ph(2) + Pt(2) - dcmplx(0d0,1d0)*(Ph(3)&
+     &   + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) + Pt(4))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) - mt*Eg(4)*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt - Ph(1) - Pt(1))*(kapt*UBt(2)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) + Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) +&
+     &   kapt*UBt(4))) + (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1)&
+     &   - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) + (Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(mt*Eg(1)*((Ph(4) +&
+     &   Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(4)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4))))) +&
+     &   (ECw(1) + ECw(4))*((mt - Pb(1) + Pw(1))*(mt*Eg(4)*((Ph(4) + Pt(4))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (mt + Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) +&
+     &   kapt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(4))) + mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(1)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) +&
+     &   (Pb(2) - Pw(2) + dcmplx(0d0,1d0)*(Pb(3) - Pw(3)))*(mt*Eg(1)*((Ph(2) + Pt(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) - (Ph(4) +&
+     &   Pt(4))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (mt + Ph(1) +&
+     &   Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) - mt*Eg(4)*((dcmplx(0d0,1d0)*Ph(2)&
+     &   + Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) +&
+     &   (mt - Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + (Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*(mt*(mt - Ph(1) - Pt(1))*(kapt*UBt(1) -&
+     &   dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) + Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) -&
+     &   kapt*mt*UBt(3)) + (Ph(2) + Pt(2) + dcmplx(0d0,1d0)*(Ph(3) +&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) - kapt*mt*UBt(4)))) + (Pb(4) -&
+     &   Pw(4))*(mt*Eg(1)*((Ph(4) + Pt(4))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (mt +&
+     &   Ph(1) + Pt(1))*(dcmplx(0d0,-1d0)*kap*UBt(1) + kapt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4))) +&
+     &   mt*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pt(2) + Pt(3))*(kap*UBt(1) + dcmplx(0d0,1d0)*kapt*UBt(3)) + (mt -&
+     &   Ph(1) - Pt(1))*(kapt*UBt(2) - dcmplx(0d0,1d0)*kap*UBt(4)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,-1d0)*kap*UBt(2) + kapt*UBt(4))) + Eg(4)*(mt*(mt - Ph(1) -&
+     &   Pt(1))*(kapt*UBt(1) - dcmplx(0d0,1d0)*kap*UBt(3)) + (Ph(4) +&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*mt*UBt(1) - kapt*mt*UBt(3)) + (Ph(2) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pt(3)))*(dcmplx(0d0,1d0)*kap*mt*UBt(2) -&
+     &   kapt*mt*UBt(4))))))))/(sqrt2*v**2*(mt**2 - (Ph(1) + Pt(1))**2 + (Ph(2) + Pt(2))**2&
+     &   + (Ph(3) + Pt(3))**2 + (Ph(4) + Pt(4))**2)*(mt**2 - (Pb(1) - Pw(1))**2 + (Pb(2) -&
+     &   Pw(2))**2 + (Pb(3) - Pw(3))**2 + (Pb(4) - Pw(4))**2))
+     
+        ampwt = (gs*mw*(dcmplx(0d0,-1d0)*DCONJG(UBb(1))*((a1WW*mw**2*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + a1WW*(Ph(2) + dcmplx(0d0,1d0)*Ph(3) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(3)*Ph(3) + ECw(4)*Ph(4) - ECw(1)*(Ph(1) + Pw(1)) +&
+     &   ECw(2)*(Ph(2) + Pw(2)) + ECw(3)*Pw(3) + ECw(4)*Pw(4)) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))) +&
+     &   2*a2WW*(dcmplx(0d0,-1d0)*ECw(3)*(Ph(1)*Pw(1) + Pw(1)**2 - Ph(2)*Pw(2) -&
+     &   dcmplx(0d0,1d0)*Ph(3)*Pw(2) - Pw(2)**2 - dcmplx(0d0,1d0)*Pw(2)*Pw(3) - Ph(4)*Pw(4) -&
+     &   Pw(4)**2) + ECw(2)*(-(Ph(1)*Pw(1)) - Pw(1)**2 - dcmplx(0d0,1d0)*Ph(2)*Pw(3) +&
+     &   Ph(3)*Pw(3) - dcmplx(0d0,1d0)*Pw(2)*Pw(3) + Pw(3)**2 + Ph(4)*Pw(4) + Pw(4)**2) +&
+     &   (Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(4)*(Ph(4) +&
+     &   Pw(4)))))*(dcmplx(0d0,1d0)*Eg(3)*Pg(4)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*Pt(4)*UBt(1) +&
+     &   mt*Eg(1)*UBt(2) - Eg(1)*Pg(1)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*Pg(2)*UBt(2) +&
+     &   Eg(3)*Pg(3)*UBt(2) + Eg(1)*Pt(1)*UBt(2) - dcmplx(0d0,1d0)*Eg(3)*Pt(2)*UBt(2) -&
+     &   Eg(3)*Pt(3)*UBt(2) - dcmplx(0d0,1d0)*mt*Eg(3)*UBt(3) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(1)*UBt(3) + Eg(1)*Pg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(1)*Pg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*Pt(1)*UBt(3) -&
+     &   Eg(1)*Pt(2)*UBt(3) + dcmplx(0d0,1d0)*Eg(1)*Pt(3)*UBt(3) + Eg(2)*(-(Pg(4)*UBt(1)) +&
+     &   Pt(4)*UBt(1) + Pg(2)*UBt(2) - dcmplx(0d0,1d0)*Pg(3)*UBt(2) - Pt(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3)*UBt(2) + mt*UBt(3) - Pg(1)*UBt(3) + Pt(1)*UBt(3)) -&
+     &   Eg(1)*Pg(4)*UBt(4) + Eg(1)*Pt(4)*UBt(4) + Eg(4)*(Pg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Pg(3)*UBt(1) - Pt(2)*UBt(1) + dcmplx(0d0,1d0)*Pt(3)*UBt(1) +&
+     &   Pg(4)*UBt(2) - Pt(4)*UBt(2) - mt*UBt(4) + Pg(1)*UBt(4) - Pt(1)*UBt(4))) +&
+     &   (a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3))&
+     &   - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) -&
+     &   ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*(Eg(2)*Pg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(2)*UBt(1) + dcmplx(0d0,1d0)*Eg(2)*Pg(3)*UBt(1) +&
+     &   Eg(3)*Pg(3)*UBt(1) + Eg(4)*Pg(4)*UBt(1) - Eg(2)*Pt(2)*UBt(1) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(2)*Pt(3)*UBt(1) -&
+     &   Eg(3)*Pt(3)*UBt(1) - Eg(4)*Pt(4)*UBt(1) - Eg(4)*Pg(2)*UBt(2) -&
+     &   dcmplx(0d0,1d0)*Eg(4)*Pg(3)*UBt(2) + Eg(2)*Pg(4)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(4)*UBt(2) + Eg(4)*Pt(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(4)*Pt(3)*UBt(2) - Eg(2)*Pt(4)*UBt(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(4)*UBt(2) - Eg(4)*Pg(1)*UBt(3) + Eg(4)*Pt(1)*UBt(3) -&
+     &   Eg(2)*Pg(1)*UBt(4) - dcmplx(0d0,1d0)*Eg(3)*Pg(1)*UBt(4) + Eg(2)*Pt(1)*UBt(4) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(1)*UBt(4) + mt*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + Eg(1)*(-(Pg(1)*UBt(1)) + Pt(1)*UBt(1) + Pg(4)*UBt(3)&
+     &   - Pt(4)*UBt(3) + Pg(2)*UBt(4) + dcmplx(0d0,1d0)*Pg(3)*UBt(4) - Pt(2)*UBt(4) -&
+     &   dcmplx(0d0,1d0)*Pt(3)*UBt(4))) - (a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) +&
+     &   Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1))&
+     &   + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) +&
+     &   Pw(4)))))*(-(Eg(1)*Pg(4)*UBt(1)) + Eg(1)*Pt(4)*UBt(1) + Eg(2)*Pg(1)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(1)*UBt(2) - Eg(1)*Pg(2)*UBt(2) -&
+     &   dcmplx(0d0,1d0)*Eg(1)*Pg(3)*UBt(2) - Eg(2)*Pt(1)*UBt(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(1)*UBt(2) + Eg(1)*Pt(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(1)*Pt(3)*UBt(2) + Eg(1)*Pg(1)*UBt(3) - Eg(2)*Pg(2)*UBt(3) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(2)*Pg(3)*UBt(3) -&
+     &   Eg(3)*Pg(3)*UBt(3) - Eg(1)*Pt(1)*UBt(3) + Eg(2)*Pt(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(2)*UBt(3) + dcmplx(0d0,1d0)*Eg(2)*Pt(3)*UBt(3) +&
+     &   Eg(3)*Pt(3)*UBt(3) + mt*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) +&
+     &   Eg(1)*UBt(3)) - Eg(2)*Pg(4)*UBt(4) - dcmplx(0d0,1d0)*Eg(3)*Pg(4)*UBt(4) +&
+     &   Eg(2)*Pt(4)*UBt(4) + dcmplx(0d0,1d0)*Eg(3)*Pt(4)*UBt(4) + Eg(4)*(Pg(1)*UBt(1) -&
+     &   Pt(1)*UBt(1) - Pg(4)*UBt(3) + Pt(4)*UBt(3) + Pg(2)*UBt(4) +&
+     &   dcmplx(0d0,1d0)*Pg(3)*UBt(4) - Pt(2)*UBt(4) - dcmplx(0d0,1d0)*Pt(3)*UBt(4))) -&
+     &   (a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + a1WW*(Ph(2) + dcmplx(0d0,1d0)*Ph(3) +&
+     &   Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(3)*Ph(3) + ECw(4)*Ph(4) - ECw(1)*(Ph(1) + Pw(1)) +&
+     &   ECw(2)*(Ph(2) + Pw(2)) + ECw(3)*Pw(3) + ECw(4)*Pw(4)) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))) +&
+     &   2*a2WW*(dcmplx(0d0,-1d0)*ECw(3)*(Ph(1)*Pw(1) + Pw(1)**2 - Ph(2)*Pw(2) -&
+     &   dcmplx(0d0,1d0)*Ph(3)*Pw(2) - Pw(2)**2 - dcmplx(0d0,1d0)*Pw(2)*Pw(3) - Ph(4)*Pw(4) -&
+     &   Pw(4)**2) + ECw(2)*(-(Ph(1)*Pw(1)) - Pw(1)**2 - dcmplx(0d0,1d0)*Ph(2)*Pw(3) +&
+     &   Ph(3)*Pw(3) - dcmplx(0d0,1d0)*Pw(2)*Pw(3) + Pw(3)**2 + Ph(4)*Pw(4) + Pw(4)**2) +&
+     &   (Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(4)*(Ph(4) +&
+     &   Pw(4)))))*(dcmplx(0d0,-1d0)*Eg(3)*Pg(1)*UBt(1) - Eg(1)*Pg(2)*UBt(1) +&
+     &   dcmplx(0d0,1d0)*Eg(1)*Pg(3)*UBt(1) + dcmplx(0d0,1d0)*Eg(3)*Pt(1)*UBt(1) +&
+     &   Eg(1)*Pt(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(1)*Pt(3)*UBt(1) - Eg(4)*Pg(1)*UBt(2) +&
+     &   Eg(1)*Pg(4)*UBt(2) + Eg(4)*Pt(1)*UBt(2) - Eg(1)*Pt(4)*UBt(2) - Eg(4)*Pg(2)*UBt(3) +&
+     &   dcmplx(0d0,1d0)*Eg(4)*Pg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*Pg(4)*UBt(3) +&
+     &   Eg(4)*Pt(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(4)*Pt(3)*UBt(3) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(4)*UBt(3) + Eg(1)*Pg(1)*UBt(4) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(2)*UBt(4) - Eg(3)*Pg(3)*UBt(4) - Eg(4)*Pg(4)*UBt(4) -&
+     &   Eg(1)*Pt(1)*UBt(4) + dcmplx(0d0,1d0)*Eg(3)*Pt(2)*UBt(4) + Eg(3)*Pt(3)*UBt(4) +&
+     &   Eg(4)*Pt(4)*UBt(4) + mt*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) +&
+     &   Eg(1)*UBt(4)) + Eg(2)*(Pg(1)*UBt(1) - Pt(1)*UBt(1) + Pg(4)*UBt(3) - Pt(4)*UBt(3) -&
+     &   Pg(2)*UBt(4) + dcmplx(0d0,1d0)*Pg(3)*UBt(4) + Pt(2)*UBt(4) -&
+     &   dcmplx(0d0,1d0)*Pt(3)*UBt(4)))) - dcmplx(0d0,1d0)*DCONJG(UBb(3))*((a1WW*mw**2*(ECw(2)&
+     &   + dcmplx(0d0,1d0)*ECw(3)) + a1WW*(Ph(2) + dcmplx(0d0,1d0)*Ph(3) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(3)*Ph(3) + ECw(4)*Ph(4) - ECw(1)*(Ph(1) + Pw(1)) +&
+     &   ECw(2)*(Ph(2) + Pw(2)) + ECw(3)*Pw(3) + ECw(4)*Pw(4)) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))) +&
+     &   2*a2WW*(dcmplx(0d0,-1d0)*ECw(3)*(Ph(1)*Pw(1) + Pw(1)**2 - Ph(2)*Pw(2) -&
+     &   dcmplx(0d0,1d0)*Ph(3)*Pw(2) - Pw(2)**2 - dcmplx(0d0,1d0)*Pw(2)*Pw(3) - Ph(4)*Pw(4) -&
+     &   Pw(4)**2) + ECw(2)*(-(Ph(1)*Pw(1)) - Pw(1)**2 - dcmplx(0d0,1d0)*Ph(2)*Pw(3) +&
+     &   Ph(3)*Pw(3) - dcmplx(0d0,1d0)*Pw(2)*Pw(3) + Pw(3)**2 + Ph(4)*Pw(4) + Pw(4)**2) +&
+     &   (Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(4)*(Ph(4) +&
+     &   Pw(4)))))*(dcmplx(0d0,1d0)*Eg(3)*Pg(4)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*Pt(4)*UBt(1) +&
+     &   mt*Eg(1)*UBt(2) - Eg(1)*Pg(1)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*Pg(2)*UBt(2) +&
+     &   Eg(3)*Pg(3)*UBt(2) + Eg(1)*Pt(1)*UBt(2) - dcmplx(0d0,1d0)*Eg(3)*Pt(2)*UBt(2) -&
+     &   Eg(3)*Pt(3)*UBt(2) - dcmplx(0d0,1d0)*mt*Eg(3)*UBt(3) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(1)*UBt(3) + Eg(1)*Pg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(1)*Pg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*Pt(1)*UBt(3) -&
+     &   Eg(1)*Pt(2)*UBt(3) + dcmplx(0d0,1d0)*Eg(1)*Pt(3)*UBt(3) + Eg(2)*(-(Pg(4)*UBt(1)) +&
+     &   Pt(4)*UBt(1) + Pg(2)*UBt(2) - dcmplx(0d0,1d0)*Pg(3)*UBt(2) - Pt(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3)*UBt(2) + mt*UBt(3) - Pg(1)*UBt(3) + Pt(1)*UBt(3)) -&
+     &   Eg(1)*Pg(4)*UBt(4) + Eg(1)*Pt(4)*UBt(4) + Eg(4)*(Pg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Pg(3)*UBt(1) - Pt(2)*UBt(1) + dcmplx(0d0,1d0)*Pt(3)*UBt(1) +&
+     &   Pg(4)*UBt(2) - Pt(4)*UBt(2) - mt*UBt(4) + Pg(1)*UBt(4) - Pt(1)*UBt(4))) +&
+     &   (a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3))&
+     &   - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) -&
+     &   ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))*(Eg(2)*Pg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(2)*UBt(1) + dcmplx(0d0,1d0)*Eg(2)*Pg(3)*UBt(1) +&
+     &   Eg(3)*Pg(3)*UBt(1) + Eg(4)*Pg(4)*UBt(1) - Eg(2)*Pt(2)*UBt(1) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(2)*Pt(3)*UBt(1) -&
+     &   Eg(3)*Pt(3)*UBt(1) - Eg(4)*Pt(4)*UBt(1) - Eg(4)*Pg(2)*UBt(2) -&
+     &   dcmplx(0d0,1d0)*Eg(4)*Pg(3)*UBt(2) + Eg(2)*Pg(4)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(4)*UBt(2) + Eg(4)*Pt(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(4)*Pt(3)*UBt(2) - Eg(2)*Pt(4)*UBt(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(4)*UBt(2) - Eg(4)*Pg(1)*UBt(3) + Eg(4)*Pt(1)*UBt(3) -&
+     &   Eg(2)*Pg(1)*UBt(4) - dcmplx(0d0,1d0)*Eg(3)*Pg(1)*UBt(4) + Eg(2)*Pt(1)*UBt(4) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(1)*UBt(4) + mt*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + Eg(1)*(-(Pg(1)*UBt(1)) + Pt(1)*UBt(1) + Pg(4)*UBt(3)&
+     &   - Pt(4)*UBt(3) + Pg(2)*UBt(4) + dcmplx(0d0,1d0)*Pg(3)*UBt(4) - Pt(2)*UBt(4) -&
+     &   dcmplx(0d0,1d0)*Pt(3)*UBt(4))) - (a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) +&
+     &   Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1))&
+     &   + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) +&
+     &   Pw(4)))))*(-(Eg(1)*Pg(4)*UBt(1)) + Eg(1)*Pt(4)*UBt(1) + Eg(2)*Pg(1)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(1)*UBt(2) - Eg(1)*Pg(2)*UBt(2) -&
+     &   dcmplx(0d0,1d0)*Eg(1)*Pg(3)*UBt(2) - Eg(2)*Pt(1)*UBt(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(1)*UBt(2) + Eg(1)*Pt(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(1)*Pt(3)*UBt(2) + Eg(1)*Pg(1)*UBt(3) - Eg(2)*Pg(2)*UBt(3) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(2)*Pg(3)*UBt(3) -&
+     &   Eg(3)*Pg(3)*UBt(3) - Eg(1)*Pt(1)*UBt(3) + Eg(2)*Pt(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(2)*UBt(3) + dcmplx(0d0,1d0)*Eg(2)*Pt(3)*UBt(3) +&
+     &   Eg(3)*Pt(3)*UBt(3) + mt*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) +&
+     &   Eg(1)*UBt(3)) - Eg(2)*Pg(4)*UBt(4) - dcmplx(0d0,1d0)*Eg(3)*Pg(4)*UBt(4) +&
+     &   Eg(2)*Pt(4)*UBt(4) + dcmplx(0d0,1d0)*Eg(3)*Pt(4)*UBt(4) + Eg(4)*(Pg(1)*UBt(1) -&
+     &   Pt(1)*UBt(1) - Pg(4)*UBt(3) + Pt(4)*UBt(3) + Pg(2)*UBt(4) +&
+     &   dcmplx(0d0,1d0)*Pg(3)*UBt(4) - Pt(2)*UBt(4) - dcmplx(0d0,1d0)*Pt(3)*UBt(4))) -&
+     &   (a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + a1WW*(Ph(2) + dcmplx(0d0,1d0)*Ph(3) +&
+     &   Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(3)*Ph(3) + ECw(4)*Ph(4) - ECw(1)*(Ph(1) + Pw(1)) +&
+     &   ECw(2)*(Ph(2) + Pw(2)) + ECw(3)*Pw(3) + ECw(4)*Pw(4)) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))) +&
+     &   2*a2WW*(dcmplx(0d0,-1d0)*ECw(3)*(Ph(1)*Pw(1) + Pw(1)**2 - Ph(2)*Pw(2) -&
+     &   dcmplx(0d0,1d0)*Ph(3)*Pw(2) - Pw(2)**2 - dcmplx(0d0,1d0)*Pw(2)*Pw(3) - Ph(4)*Pw(4) -&
+     &   Pw(4)**2) + ECw(2)*(-(Ph(1)*Pw(1)) - Pw(1)**2 - dcmplx(0d0,1d0)*Ph(2)*Pw(3) +&
+     &   Ph(3)*Pw(3) - dcmplx(0d0,1d0)*Pw(2)*Pw(3) + Pw(3)**2 + Ph(4)*Pw(4) + Pw(4)**2) +&
+     &   (Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(4)*(Ph(4) +&
+     &   Pw(4)))))*(dcmplx(0d0,-1d0)*Eg(3)*Pg(1)*UBt(1) - Eg(1)*Pg(2)*UBt(1) +&
+     &   dcmplx(0d0,1d0)*Eg(1)*Pg(3)*UBt(1) + dcmplx(0d0,1d0)*Eg(3)*Pt(1)*UBt(1) +&
+     &   Eg(1)*Pt(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(1)*Pt(3)*UBt(1) - Eg(4)*Pg(1)*UBt(2) +&
+     &   Eg(1)*Pg(4)*UBt(2) + Eg(4)*Pt(1)*UBt(2) - Eg(1)*Pt(4)*UBt(2) - Eg(4)*Pg(2)*UBt(3) +&
+     &   dcmplx(0d0,1d0)*Eg(4)*Pg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*Pg(4)*UBt(3) +&
+     &   Eg(4)*Pt(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(4)*Pt(3)*UBt(3) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(4)*UBt(3) + Eg(1)*Pg(1)*UBt(4) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(2)*UBt(4) - Eg(3)*Pg(3)*UBt(4) - Eg(4)*Pg(4)*UBt(4) -&
+     &   Eg(1)*Pt(1)*UBt(4) + dcmplx(0d0,1d0)*Eg(3)*Pt(2)*UBt(4) + Eg(3)*Pt(3)*UBt(4) +&
+     &   Eg(4)*Pt(4)*UBt(4) + mt*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) +&
+     &   Eg(1)*UBt(4)) + Eg(2)*(Pg(1)*UBt(1) - Pt(1)*UBt(1) + Pg(4)*UBt(3) - Pt(4)*UBt(3) -&
+     &   Pg(2)*UBt(4) + dcmplx(0d0,1d0)*Pg(3)*UBt(4) + Pt(2)*UBt(4) -&
+     &   dcmplx(0d0,1d0)*Pt(3)*UBt(4)))) - DCONJG(UBb(4))*(dcmplx(0d0,1d0)*(a1WW*mw**2*(ECw(1)&
+     &   - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) +&
+     &   Pw(4)))))*(dcmplx(0d0,1d0)*Eg(3)*Pg(4)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*Pt(4)*UBt(1) +&
+     &   mt*Eg(1)*UBt(2) - Eg(1)*Pg(1)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*Pg(2)*UBt(2) +&
+     &   Eg(3)*Pg(3)*UBt(2) + Eg(1)*Pt(1)*UBt(2) - dcmplx(0d0,1d0)*Eg(3)*Pt(2)*UBt(2) -&
+     &   Eg(3)*Pt(3)*UBt(2) - dcmplx(0d0,1d0)*mt*Eg(3)*UBt(3) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(1)*UBt(3) + Eg(1)*Pg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(1)*Pg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*Pt(1)*UBt(3) -&
+     &   Eg(1)*Pt(2)*UBt(3) + dcmplx(0d0,1d0)*Eg(1)*Pt(3)*UBt(3) + Eg(2)*(-(Pg(4)*UBt(1)) +&
+     &   Pt(4)*UBt(1) + Pg(2)*UBt(2) - dcmplx(0d0,1d0)*Pg(3)*UBt(2) - Pt(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3)*UBt(2) + mt*UBt(3) - Pg(1)*UBt(3) + Pt(1)*UBt(3)) -&
+     &   Eg(1)*Pg(4)*UBt(4) + Eg(1)*Pt(4)*UBt(4) + Eg(4)*(Pg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Pg(3)*UBt(1) - Pt(2)*UBt(1) + dcmplx(0d0,1d0)*Pt(3)*UBt(1) +&
+     &   Pg(4)*UBt(2) - Pt(4)*UBt(2) - mt*UBt(4) + Pg(1)*UBt(4) - Pt(1)*UBt(4))) +&
+     &   (a1WW*(mw**2*(dcmplx(0d0,1d0)*ECw(2) + ECw(3)) + (dcmplx(0d0,1d0)*Ph(2) + Ph(3) +&
+     &   dcmplx(0d0,1d0)*Pw(2) + Pw(3))*(ECw(3)*Ph(3) + ECw(4)*Ph(4) - ECw(1)*(Ph(1) + Pw(1)) +&
+     &   ECw(2)*(Ph(2) + Pw(2)) + ECw(3)*Pw(3) + ECw(4)*Pw(4))) +&
+     &   dcmplx(0d0,2d0)*(a4WW*(ECw(3)*Ph(4)*Pw(1) - dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) -&
+     &   ECw(1)*Ph(4)*Pw(3) + ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) +&
+     &   Ph(1)*(dcmplx(0d0,1d0)*Pw(2) + Pw(3))) - ECw(3)*Ph(1)*Pw(4) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4) +&
+     &   dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))) +&
+     &   a2WW*(dcmplx(0d0,1d0)*ECw(3)*(Ph(1)*Pw(1) + Pw(1)**2 - Ph(2)*Pw(2) +&
+     &   dcmplx(0d0,1d0)*Ph(3)*Pw(2) - Pw(2)**2 + dcmplx(0d0,1d0)*Pw(2)*Pw(3) - Ph(4)*Pw(4) -&
+     &   Pw(4)**2) + ECw(2)*(-(Ph(1)*Pw(1)) - Pw(1)**2 + dcmplx(0d0,1d0)*Ph(2)*Pw(3) +&
+     &   Ph(3)*Pw(3) + dcmplx(0d0,1d0)*Pw(2)*Pw(3) + Pw(3)**2 + Ph(4)*Pw(4) + Pw(4)**2) +&
+     &   (Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(4)*(Ph(4) +&
+     &   Pw(4))))))*(Eg(2)*Pg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*Pg(2)*UBt(1) +&
+     &   dcmplx(0d0,1d0)*Eg(2)*Pg(3)*UBt(1) + Eg(3)*Pg(3)*UBt(1) + Eg(4)*Pg(4)*UBt(1) -&
+     &   Eg(2)*Pt(2)*UBt(1) + dcmplx(0d0,1d0)*Eg(3)*Pt(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(2)*Pt(3)*UBt(1) - Eg(3)*Pt(3)*UBt(1) - Eg(4)*Pt(4)*UBt(1) -&
+     &   Eg(4)*Pg(2)*UBt(2) - dcmplx(0d0,1d0)*Eg(4)*Pg(3)*UBt(2) + Eg(2)*Pg(4)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(4)*UBt(2) + Eg(4)*Pt(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(4)*Pt(3)*UBt(2) - Eg(2)*Pt(4)*UBt(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(4)*UBt(2) - Eg(4)*Pg(1)*UBt(3) + Eg(4)*Pt(1)*UBt(3) -&
+     &   Eg(2)*Pg(1)*UBt(4) - dcmplx(0d0,1d0)*Eg(3)*Pg(1)*UBt(4) + Eg(2)*Pt(1)*UBt(4) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(1)*UBt(4) + mt*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + Eg(1)*(-(Pg(1)*UBt(1)) + Pt(1)*UBt(1) + Pg(4)*UBt(3)&
+     &   - Pt(4)*UBt(3) + Pg(2)*UBt(4) + dcmplx(0d0,1d0)*Pg(3)*UBt(4) - Pt(2)*UBt(4) -&
+     &   dcmplx(0d0,1d0)*Pt(3)*UBt(4))) - dcmplx(0d0,1d0)*(a1WW*mw**2*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + a1WW*(Ph(2) - dcmplx(0d0,1d0)*(Ph(3) + dcmplx(0d0,1d0)*Pw(2)&
+     &   + Pw(3)))*(ECw(3)*Ph(3) + ECw(4)*Ph(4) - ECw(1)*(Ph(1) + Pw(1)) + ECw(2)*(Ph(2) +&
+     &   Pw(2)) + ECw(3)*Pw(3) + ECw(4)*Pw(4)) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))) +&
+     &   2*a2WW*(dcmplx(0d0,1d0)*ECw(3)*(Ph(1)*Pw(1) + Pw(1)**2 - Ph(2)*Pw(2) +&
+     &   dcmplx(0d0,1d0)*Ph(3)*Pw(2) - Pw(2)**2 + dcmplx(0d0,1d0)*Pw(2)*Pw(3) - Ph(4)*Pw(4) -&
+     &   Pw(4)**2) + ECw(2)*(-(Ph(1)*Pw(1)) - Pw(1)**2 + dcmplx(0d0,1d0)*Ph(2)*Pw(3) +&
+     &   Ph(3)*Pw(3) + dcmplx(0d0,1d0)*Pw(2)*Pw(3) + Pw(3)**2 + Ph(4)*Pw(4) + Pw(4)**2) +&
+     &   (Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(4)*(Ph(4) +&
+     &   Pw(4)))))*(-(Eg(1)*Pg(4)*UBt(1)) + Eg(1)*Pt(4)*UBt(1) + Eg(2)*Pg(1)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(1)*UBt(2) - Eg(1)*Pg(2)*UBt(2) -&
+     &   dcmplx(0d0,1d0)*Eg(1)*Pg(3)*UBt(2) - Eg(2)*Pt(1)*UBt(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(1)*UBt(2) + Eg(1)*Pt(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(1)*Pt(3)*UBt(2) + Eg(1)*Pg(1)*UBt(3) - Eg(2)*Pg(2)*UBt(3) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(2)*Pg(3)*UBt(3) -&
+     &   Eg(3)*Pg(3)*UBt(3) - Eg(1)*Pt(1)*UBt(3) + Eg(2)*Pt(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(2)*UBt(3) + dcmplx(0d0,1d0)*Eg(2)*Pt(3)*UBt(3) +&
+     &   Eg(3)*Pt(3)*UBt(3) + mt*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) +&
+     &   Eg(1)*UBt(3)) - Eg(2)*Pg(4)*UBt(4) - dcmplx(0d0,1d0)*Eg(3)*Pg(4)*UBt(4) +&
+     &   Eg(2)*Pt(4)*UBt(4) + dcmplx(0d0,1d0)*Eg(3)*Pt(4)*UBt(4) + Eg(4)*(Pg(1)*UBt(1) -&
+     &   Pt(1)*UBt(1) - Pg(4)*UBt(3) + Pt(4)*UBt(3) + Pg(2)*UBt(4) +&
+     &   dcmplx(0d0,1d0)*Pg(3)*UBt(4) - Pt(2)*UBt(4) - dcmplx(0d0,1d0)*Pt(3)*UBt(4))) -&
+     &   dcmplx(0d0,1d0)*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) +&
+     &   Pw(4)))))*(dcmplx(0d0,-1d0)*Eg(3)*Pg(1)*UBt(1) - Eg(1)*Pg(2)*UBt(1) +&
+     &   dcmplx(0d0,1d0)*Eg(1)*Pg(3)*UBt(1) + dcmplx(0d0,1d0)*Eg(3)*Pt(1)*UBt(1) +&
+     &   Eg(1)*Pt(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(1)*Pt(3)*UBt(1) - Eg(4)*Pg(1)*UBt(2) +&
+     &   Eg(1)*Pg(4)*UBt(2) + Eg(4)*Pt(1)*UBt(2) - Eg(1)*Pt(4)*UBt(2) - Eg(4)*Pg(2)*UBt(3) +&
+     &   dcmplx(0d0,1d0)*Eg(4)*Pg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*Pg(4)*UBt(3) +&
+     &   Eg(4)*Pt(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(4)*Pt(3)*UBt(3) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(4)*UBt(3) + Eg(1)*Pg(1)*UBt(4) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(2)*UBt(4) - Eg(3)*Pg(3)*UBt(4) - Eg(4)*Pg(4)*UBt(4) -&
+     &   Eg(1)*Pt(1)*UBt(4) + dcmplx(0d0,1d0)*Eg(3)*Pt(2)*UBt(4) + Eg(3)*Pt(3)*UBt(4) +&
+     &   Eg(4)*Pt(4)*UBt(4) + mt*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) +&
+     &   Eg(1)*UBt(4)) + Eg(2)*(Pg(1)*UBt(1) - Pt(1)*UBt(1) + Pg(4)*UBt(3) - Pt(4)*UBt(3) -&
+     &   Pg(2)*UBt(4) + dcmplx(0d0,1d0)*Pg(3)*UBt(4) + Pt(2)*UBt(4) -&
+     &   dcmplx(0d0,1d0)*Pt(3)*UBt(4)))) + DCONJG(UBb(2))*(dcmplx(0d0,-1d0)*(a1WW*mw**2*(ECw(1)&
+     &   - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) - Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) -&
+     &   2*a2WW*(ECw(3)*Ph(3)*Pw(1) - ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3)&
+     &   + ECw(3)*Pw(1)*Pw(3) - ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) +&
+     &   ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) -&
+     &   ECw(3)*Pw(3)*Pw(4) - ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2&
+     &   + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1)&
+     &   - ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1)&
+     &   - Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) +&
+     &   Pw(4)))))*(dcmplx(0d0,1d0)*Eg(3)*Pg(4)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*Pt(4)*UBt(1) +&
+     &   mt*Eg(1)*UBt(2) - Eg(1)*Pg(1)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*Pg(2)*UBt(2) +&
+     &   Eg(3)*Pg(3)*UBt(2) + Eg(1)*Pt(1)*UBt(2) - dcmplx(0d0,1d0)*Eg(3)*Pt(2)*UBt(2) -&
+     &   Eg(3)*Pt(3)*UBt(2) - dcmplx(0d0,1d0)*mt*Eg(3)*UBt(3) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(1)*UBt(3) + Eg(1)*Pg(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(1)*Pg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*Pt(1)*UBt(3) -&
+     &   Eg(1)*Pt(2)*UBt(3) + dcmplx(0d0,1d0)*Eg(1)*Pt(3)*UBt(3) + Eg(2)*(-(Pg(4)*UBt(1)) +&
+     &   Pt(4)*UBt(1) + Pg(2)*UBt(2) - dcmplx(0d0,1d0)*Pg(3)*UBt(2) - Pt(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3)*UBt(2) + mt*UBt(3) - Pg(1)*UBt(3) + Pt(1)*UBt(3)) -&
+     &   Eg(1)*Pg(4)*UBt(4) + Eg(1)*Pt(4)*UBt(4) + Eg(4)*(Pg(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Pg(3)*UBt(1) - Pt(2)*UBt(1) + dcmplx(0d0,1d0)*Pt(3)*UBt(1) +&
+     &   Pg(4)*UBt(2) - Pt(4)*UBt(2) - mt*UBt(4) + Pg(1)*UBt(4) - Pt(1)*UBt(4))) -&
+     &   dcmplx(0d0,1d0)*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + a1WW*(Ph(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + dcmplx(0d0,1d0)*Pw(2) + Pw(3)))*(ECw(3)*Ph(3) + ECw(4)*Ph(4)&
+     &   - ECw(1)*(Ph(1) + Pw(1)) + ECw(2)*(Ph(2) + Pw(2)) + ECw(3)*Pw(3) + ECw(4)*Pw(4)) +&
+     &   2*a4WW*(ECw(3)*Ph(4)*Pw(1) - dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))) +&
+     &   2*a2WW*(dcmplx(0d0,1d0)*ECw(3)*(Ph(1)*Pw(1) + Pw(1)**2 - Ph(2)*Pw(2) +&
+     &   dcmplx(0d0,1d0)*Ph(3)*Pw(2) - Pw(2)**2 + dcmplx(0d0,1d0)*Pw(2)*Pw(3) - Ph(4)*Pw(4) -&
+     &   Pw(4)**2) + ECw(2)*(-(Ph(1)*Pw(1)) - Pw(1)**2 + dcmplx(0d0,1d0)*Ph(2)*Pw(3) +&
+     &   Ph(3)*Pw(3) + dcmplx(0d0,1d0)*Pw(2)*Pw(3) + Pw(3)**2 + Ph(4)*Pw(4) + Pw(4)**2) +&
+     &   (Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(4)*(Ph(4) +&
+     &   Pw(4)))))*(Eg(2)*Pg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*Pg(2)*UBt(1) +&
+     &   dcmplx(0d0,1d0)*Eg(2)*Pg(3)*UBt(1) + Eg(3)*Pg(3)*UBt(1) + Eg(4)*Pg(4)*UBt(1) -&
+     &   Eg(2)*Pt(2)*UBt(1) + dcmplx(0d0,1d0)*Eg(3)*Pt(2)*UBt(1) -&
+     &   dcmplx(0d0,1d0)*Eg(2)*Pt(3)*UBt(1) - Eg(3)*Pt(3)*UBt(1) - Eg(4)*Pt(4)*UBt(1) -&
+     &   Eg(4)*Pg(2)*UBt(2) - dcmplx(0d0,1d0)*Eg(4)*Pg(3)*UBt(2) + Eg(2)*Pg(4)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(4)*UBt(2) + Eg(4)*Pt(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(4)*Pt(3)*UBt(2) - Eg(2)*Pt(4)*UBt(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(4)*UBt(2) - Eg(4)*Pg(1)*UBt(3) + Eg(4)*Pt(1)*UBt(3) -&
+     &   Eg(2)*Pg(1)*UBt(4) - dcmplx(0d0,1d0)*Eg(3)*Pg(1)*UBt(4) + Eg(2)*Pt(1)*UBt(4) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(1)*UBt(4) + mt*(Eg(1)*UBt(1) + Eg(4)*UBt(3) + (Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*UBt(4)) + Eg(1)*(-(Pg(1)*UBt(1)) + Pt(1)*UBt(1) + Pg(4)*UBt(3)&
+     &   - Pt(4)*UBt(3) + Pg(2)*UBt(4) + dcmplx(0d0,1d0)*Pg(3)*UBt(4) - Pt(2)*UBt(4) -&
+     &   dcmplx(0d0,1d0)*Pt(3)*UBt(4))) + (a1WW*(mw**2*(dcmplx(0d0,1d0)*ECw(2) + ECw(3)) +&
+     &   (dcmplx(0d0,1d0)*Ph(2) + Ph(3) + dcmplx(0d0,1d0)*Pw(2) + Pw(3))*(ECw(3)*Ph(3) +&
+     &   ECw(4)*Ph(4) - ECw(1)*(Ph(1) + Pw(1)) + ECw(2)*(Ph(2) + Pw(2)) + ECw(3)*Pw(3) +&
+     &   ECw(4)*Pw(4))) + dcmplx(0d0,2d0)*(a4WW*(ECw(3)*Ph(4)*Pw(1) - dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2)&
+     &   - ECw(1)*Ph(4)*Pw(3) + ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) +&
+     &   Ph(1)*(dcmplx(0d0,1d0)*Pw(2) + Pw(3))) - ECw(3)*Ph(1)*Pw(4) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4) +&
+     &   dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4))) +&
+     &   a2WW*(dcmplx(0d0,1d0)*ECw(3)*(Ph(1)*Pw(1) + Pw(1)**2 - Ph(2)*Pw(2) +&
+     &   dcmplx(0d0,1d0)*Ph(3)*Pw(2) - Pw(2)**2 + dcmplx(0d0,1d0)*Pw(2)*Pw(3) - Ph(4)*Pw(4) -&
+     &   Pw(4)**2) + ECw(2)*(-(Ph(1)*Pw(1)) - Pw(1)**2 + dcmplx(0d0,1d0)*Ph(2)*Pw(3) +&
+     &   Ph(3)*Pw(3) + dcmplx(0d0,1d0)*Pw(2)*Pw(3) + Pw(3)**2 + Ph(4)*Pw(4) + Pw(4)**2) +&
+     &   (Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(4)*(Ph(4) +&
+     &   Pw(4))))))*(-(Eg(1)*Pg(4)*UBt(1)) + Eg(1)*Pt(4)*UBt(1) + Eg(2)*Pg(1)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(1)*UBt(2) - Eg(1)*Pg(2)*UBt(2) -&
+     &   dcmplx(0d0,1d0)*Eg(1)*Pg(3)*UBt(2) - Eg(2)*Pt(1)*UBt(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(1)*UBt(2) + Eg(1)*Pt(2)*UBt(2) +&
+     &   dcmplx(0d0,1d0)*Eg(1)*Pt(3)*UBt(2) + Eg(1)*Pg(1)*UBt(3) - Eg(2)*Pg(2)*UBt(3) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(2)*Pg(3)*UBt(3) -&
+     &   Eg(3)*Pg(3)*UBt(3) - Eg(1)*Pt(1)*UBt(3) + Eg(2)*Pt(2)*UBt(3) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(2)*UBt(3) + dcmplx(0d0,1d0)*Eg(2)*Pt(3)*UBt(3) +&
+     &   Eg(3)*Pt(3)*UBt(3) + mt*(Eg(4)*UBt(1) + Eg(2)*UBt(2) + dcmplx(0d0,1d0)*Eg(3)*UBt(2) +&
+     &   Eg(1)*UBt(3)) - Eg(2)*Pg(4)*UBt(4) - dcmplx(0d0,1d0)*Eg(3)*Pg(4)*UBt(4) +&
+     &   Eg(2)*Pt(4)*UBt(4) + dcmplx(0d0,1d0)*Eg(3)*Pt(4)*UBt(4) + Eg(4)*(Pg(1)*UBt(1) -&
+     &   Pt(1)*UBt(1) - Pg(4)*UBt(3) + Pt(4)*UBt(3) + Pg(2)*UBt(4) +&
+     &   dcmplx(0d0,1d0)*Pg(3)*UBt(4) - Pt(2)*UBt(4) - dcmplx(0d0,1d0)*Pt(3)*UBt(4))) +&
+     &   dcmplx(0d0,1d0)*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) +&
+     &   Pw(4)))))*(dcmplx(0d0,-1d0)*Eg(3)*Pg(1)*UBt(1) - Eg(1)*Pg(2)*UBt(1) +&
+     &   dcmplx(0d0,1d0)*Eg(1)*Pg(3)*UBt(1) + dcmplx(0d0,1d0)*Eg(3)*Pt(1)*UBt(1) +&
+     &   Eg(1)*Pt(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(1)*Pt(3)*UBt(1) - Eg(4)*Pg(1)*UBt(2) +&
+     &   Eg(1)*Pg(4)*UBt(2) + Eg(4)*Pt(1)*UBt(2) - Eg(1)*Pt(4)*UBt(2) - Eg(4)*Pg(2)*UBt(3) +&
+     &   dcmplx(0d0,1d0)*Eg(4)*Pg(3)*UBt(3) - dcmplx(0d0,1d0)*Eg(3)*Pg(4)*UBt(3) +&
+     &   Eg(4)*Pt(2)*UBt(3) - dcmplx(0d0,1d0)*Eg(4)*Pt(3)*UBt(3) +&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pt(4)*UBt(3) + Eg(1)*Pg(1)*UBt(4) -&
+     &   dcmplx(0d0,1d0)*Eg(3)*Pg(2)*UBt(4) - Eg(3)*Pg(3)*UBt(4) - Eg(4)*Pg(4)*UBt(4) -&
+     &   Eg(1)*Pt(1)*UBt(4) + dcmplx(0d0,1d0)*Eg(3)*Pt(2)*UBt(4) + Eg(3)*Pt(3)*UBt(4) +&
+     &   Eg(4)*Pt(4)*UBt(4) + mt*(Eg(2)*UBt(1) - dcmplx(0d0,1d0)*Eg(3)*UBt(1) - Eg(4)*UBt(2) +&
+     &   Eg(1)*UBt(4)) + Eg(2)*(Pg(1)*UBt(1) - Pt(1)*UBt(1) + Pg(4)*UBt(3) - Pt(4)*UBt(3) -&
+     &   Pg(2)*UBt(4) + dcmplx(0d0,1d0)*Pg(3)*UBt(4) + Pt(2)*UBt(4) -&
+     &   dcmplx(0d0,1d0)*Pt(3)*UBt(4))))))/(sqrt2*v**2*(mt**2 - Pg(1)**2 + Pg(2)**2 +&
+     &   Pg(3)**2 + Pg(4)**2 + 2*Pg(1)*Pt(1) - Pt(1)**2 - 2*Pg(2)*Pt(2) + Pt(2)**2 -&
+     &   2*Pg(3)*Pt(3) + Pt(3)**2 - 2*Pg(4)*Pt(4) + Pt(4)**2)*(mw**2 - Ph(1)**2 + Ph(2)**2 +&
+     &   Ph(3)**2 + Ph(4)**2 - 2*Ph(1)*Pw(1) - Pw(1)**2 + 2*Ph(2)*Pw(2) + Pw(2)**2 +&
+     &   2*Ph(3)*Pw(3) + Pw(3)**2 + 2*Ph(4)*Pw(4) + Pw(4)**2))
+
+         amp = ampts + ampws + amptt1 + amptt2 + ampwt
+
+      end subroutine gb_twmHamp      
+
+
+      subroutine gbb_tbwpHamp(Pg,Eg,Pb,Vb,Pt,Vt,Pw,ECw,Ph,TTBHcoupl,amp)
+! amplitude for production g(Pg)+b~(Pb)->t~(Pt)+wp(Pw)+h(Ph)
+! allowing for scalar & pseudoscalar couplings of Higgs to top (Spinors and Pol-Vectors in Dirac representation!)
+        implicit none
+        real(8)    :: Pg(4),Pb(4),Pt(4),Pw(4),Ph(4)
+        complex(8) :: Vb(4),Eg(4),Vt(4),ECw(4)
+        complex(8) :: amp,ampts,ampws,amptt1,amptt2,ampwt
+        real(8)    :: mt,mw,v
+        complex(8)    :: kap,kapt,a1WW,a2WW,a4WW  
+        complex(8) TTBHcoupl(1:2)
+        include 'includeVars.F90'            
+
+
+        mw=M_W
+        mt=m_Top
+        v=vev
+        
+        kap=TTBHcoupl(1)
+        kapt=TTBHcoupl(2)
+        a1WW=(2d0,0d0)
+        a2WW=(0d0,0d0)
+        a4WW=(0d0,0d0)
+        
+
+        ampts = -((gs*mt*mw*(dcmplx(0d0,1d0)*kapt*(((ECw(1) +&
+     &   ECw(4))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2)&
+     &   + Eg(3)) - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) +&
+     &   ECw(4))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(mt + Ph(1) + Pt(1)) - ((ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) +&
+     &   DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3)) -&
+     &   dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(1) - ECw(4))*((DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) -&
+     &   ECw(4))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(Ph(2) + dcmplx(0d0,1d0)*Ph(3) + Pt(2) + dcmplx(0d0,1d0)*Pt(3)) - ((ECw(1) +&
+     &   ECw(4))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2)&
+     &   + Eg(3)) - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) +&
+     &   ECw(4))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(Ph(4) + Pt(4)))*Vt(1) - kap*(((ECw(1) +&
+     &   ECw(4))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2)&
+     &   + Eg(3)) - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) +&
+     &   ECw(4))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(mt - Ph(1) - Pt(1)) + ((ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) +&
+     &   DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3)) -&
+     &   dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(1) - ECw(4))*((DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) -&
+     &   ECw(4))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(Ph(2) + dcmplx(0d0,1d0)*Ph(3) + Pt(2) + dcmplx(0d0,1d0)*Pt(3)) + ((ECw(1) +&
+     &   ECw(4))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2)&
+     &   + Eg(3)) - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) +&
+     &   ECw(4))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(Ph(4) + Pt(4)))*Vt(1) - kap*(((ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) +&
+     &   DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3)) -&
+     &   dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(1) - ECw(4))*((DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) -&
+     &   ECw(4))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(mt - Ph(1) - Pt(1)) + ((ECw(1) +&
+     &   ECw(4))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2)&
+     &   + Eg(3)) - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) +&
+     &   ECw(4))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(Ph(2) - dcmplx(0d0,1d0)*(Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))) - ((ECw(2)&
+     &   - dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) +&
+     &   DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3)) -&
+     &   dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(1) - ECw(4))*((DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) -&
+     &   ECw(4))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(Ph(4) + Pt(4)))*Vt(2) + dcmplx(0d0,1d0)*kapt*(((ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) +&
+     &   DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3)) -&
+     &   dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(1) - ECw(4))*((DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) -&
+     &   ECw(4))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(mt + Ph(1) + Pt(1)) - ((ECw(1) +&
+     &   ECw(4))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2)&
+     &   + Eg(3)) - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) +&
+     &   ECw(4))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(Ph(2) - dcmplx(0d0,1d0)*(Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))) + ((ECw(2)&
+     &   - dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) +&
+     &   DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3)) -&
+     &   dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(1) - ECw(4))*((DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) -&
+     &   ECw(4))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(Ph(4) + Pt(4)))*Vt(2) + kap*(((ECw(1) +&
+     &   ECw(4))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2)&
+     &   + Eg(3)) - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) +&
+     &   ECw(4))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(mt + Ph(1) + Pt(1)) - ((ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) +&
+     &   DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3)) -&
+     &   dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(1) - ECw(4))*((DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) -&
+     &   ECw(4))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(Ph(2) + dcmplx(0d0,1d0)*Ph(3) + Pt(2) + dcmplx(0d0,1d0)*Pt(3)) - ((ECw(1) +&
+     &   ECw(4))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2)&
+     &   + Eg(3)) - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) +&
+     &   ECw(4))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(Ph(4) + Pt(4)))*Vt(3) - dcmplx(0d0,1d0)*kapt*(((ECw(1) +&
+     &   ECw(4))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2)&
+     &   + Eg(3)) - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) +&
+     &   ECw(4))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(mt - Ph(1) - Pt(1)) + ((ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) +&
+     &   DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3)) -&
+     &   dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(1) - ECw(4))*((DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) -&
+     &   ECw(4))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(Ph(2) + dcmplx(0d0,1d0)*Ph(3) + Pt(2) + dcmplx(0d0,1d0)*Pt(3)) + ((ECw(1) +&
+     &   ECw(4))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2)&
+     &   + Eg(3)) - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) +&
+     &   ECw(4))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(Ph(4) + Pt(4)))*Vt(3) - dcmplx(0d0,1d0)*kapt*(((ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) +&
+     &   DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3)) -&
+     &   dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(1) - ECw(4))*((DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) -&
+     &   ECw(4))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(mt - Ph(1) - Pt(1)) + ((ECw(1) +&
+     &   ECw(4))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2)&
+     &   + Eg(3)) - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) +&
+     &   ECw(4))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(Ph(2) - dcmplx(0d0,1d0)*(Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))) - ((ECw(2)&
+     &   - dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) +&
+     &   DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3)) -&
+     &   dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(1) - ECw(4))*((DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) -&
+     &   ECw(4))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(Ph(4) + Pt(4)))*Vt(4) + kap*(((ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) +&
+     &   DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3)) -&
+     &   dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(1) - ECw(4))*((DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) -&
+     &   ECw(4))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(mt + Ph(1) + Pt(1)) - ((ECw(1) +&
+     &   ECw(4))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2)&
+     &   + Eg(3)) - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(2) + dcmplx(0d0,1d0)*ECw(3))*((DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) +&
+     &   ECw(4))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(Ph(2) - dcmplx(0d0,1d0)*(Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3))) + ((ECw(2)&
+     &   - dcmplx(0d0,1d0)*ECw(3))*((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) +&
+     &   DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3)) -&
+     &   dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4))) +&
+     &   dcmplx(0d0,1d0)*(ECw(1) - ECw(4))*((DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4))) - (ECw(1) -&
+     &   ECw(4))*(dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4))))*(Ph(4) + Pt(4)))*Vt(4)))/(sqrt2*v**2*(-(Pb(1) + Pg(1))**2 + (Pb(2) +&
+     &   Pg(2))**2 + (Pb(3) + Pg(3))**2 + (Pb(4) + Pg(4))**2)*(mt**2 - (Ph(1) + Pt(1))**2 +&
+     &   (Ph(2) + Pt(2))**2 + (Ph(3) + Pt(3))**2 + (Ph(4) + Pt(4))**2)))
+
+        ampws = -((gs*mw*(-((dcmplx(0d0,1d0)*((DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) -&
+     &   (-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(1))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3)))&
+     &   - (DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(4) + Pg(4)))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   (dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3))&
+     &   + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) + (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) +&
+     &   DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3)) -&
+     &   dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4)))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   ((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4)))*(a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) - (dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4)))*(a1WW*mw**2*(ECw(1) + ECw(4))&
+     &   - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1)&
+     &   + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))))*Vt(1)) -&
+     &   (((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) +&
+     &   Eg(3)) - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4)))*(a1WW*mw**2*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) - dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   (dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4)))*(a1WW*mw**2*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) - dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   dcmplx(0d0,1d0)*((DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3))&
+     &   + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) - (-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - (DCONJG(Vb(4))*Eg(1) -&
+     &   DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(4) +&
+     &   Pg(4)))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   (dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3))&
+     &   + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) + (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) +&
+     &   DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3)) -&
+     &   dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4)))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))))*Vt(2) +&
+     &   (dcmplx(0d0,1d0)*((DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3))&
+     &   + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) - (-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - (DCONJG(Vb(4))*Eg(1) -&
+     &   DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(4) +&
+     &   Pg(4)))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   (dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3))&
+     &   + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) + (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) +&
+     &   DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3)) -&
+     &   dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4)))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   ((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4)))*(a1WW*mw**2*(ECw(1) +&
+     &   ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) +&
+     &   ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) - (dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4)))*(a1WW*mw**2*(ECw(1) + ECw(4))&
+     &   - a1WW*(Ph(1) + Ph(4) + Pw(1) + Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1)&
+     &   + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) +&
+     &   2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) + ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 +&
+     &   ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) + ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) +&
+     &   ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) + Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) -&
+     &   Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 -&
+     &   Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) + ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) +&
+     &   ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) + Pw(4))) + ECw(2)*(-((Ph(1) +&
+     &   Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))))*Vt(3) +&
+     &   (((dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) +&
+     &   Eg(3)) - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(2))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) -&
+     &   dcmplx(0d0,1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(4) + Pg(4)))*(a1WW*mw**2*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) - dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   (dcmplx(0d0,-1d0)*(-(DCONJG(Vb(3))*Eg(1)) + DCONJG(Vb(2))*(Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(1) + Pg(1)) +&
+     &   dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) +&
+     &   DCONJG(Vb(4))*Eg(4))*(Pb(2) + dcmplx(0d0,1d0)*Pb(3) + Pg(2) + dcmplx(0d0,1d0)*Pg(3)) +&
+     &   (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) + DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3))&
+     &   - dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(4) + Pg(4)))*(a1WW*mw**2*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) - dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   dcmplx(0d0,1d0)*((DCONJG(Vb(2))*Eg(1) - DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3))&
+     &   + DCONJG(Vb(4))*Eg(4))*(Pb(1) + Pg(1)) - (-(DCONJG(Vb(3))*Eg(1)) +&
+     &   DCONJG(Vb(2))*(Eg(2) + dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(1))*Eg(4))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - (DCONJG(Vb(4))*Eg(1) -&
+     &   DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(2))*Eg(4))*(Pb(4) +&
+     &   Pg(4)))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   (dcmplx(0d0,1d0)*(DCONJG(Vb(4))*Eg(1) - DCONJG(Vb(1))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3))&
+     &   + DCONJG(Vb(2))*Eg(4))*(Pb(1) + Pg(1)) + (dcmplx(0d0,1d0)*DCONJG(Vb(1))*Eg(1) +&
+     &   DCONJG(Vb(4))*(dcmplx(0d0,-1d0)*Eg(2) + Eg(3)) -&
+     &   dcmplx(0d0,1d0)*DCONJG(Vb(3))*Eg(4))*(Pb(2) - dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pg(2) + Pg(3))) - dcmplx(0d0,1d0)*(DCONJG(Vb(2))*Eg(1) -&
+     &   DCONJG(Vb(3))*(Eg(2) - dcmplx(0d0,1d0)*Eg(3)) + DCONJG(Vb(4))*Eg(4))*(Pb(4) +&
+     &   Pg(4)))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) +&
+     &   Pw(4))))))*Vt(4)))/(sqrt2*v**2*(-(Pb(1) + Pg(1))**2 + (Pb(2) + Pg(2))**2 + (Pb(3)&
+     &   + Pg(3))**2 + (Pb(4) + Pg(4))**2)*(mw**2 - (Ph(1) + Pw(1))**2 + (Ph(2) + Pw(2))**2 +&
+     &   (Ph(3) + Pw(3))**2 + (Ph(4) + Pw(4))**2)))
+
+        amptt1 = (gs*mt*mw*(-((dcmplx(0d0,1d0)*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((mt - Pg(1)&
+     &   + Pt(1))*(dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) - dcmplx(0d0,1d0)*(Pg(4) -&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) + dcmplx(0d0,1d0)*(Pg(2) -&
+     &   dcmplx(0d0,1d0)*Pg(3) - Pt(2) + dcmplx(0d0,1d0)*Pt(3))*(kapt*(((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pw(2) - Pw(3))) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4))) + dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4))))) - Eg(4)*((Pg(2) - Pt(2) + dcmplx(0d0,1d0)*(Pg(3) -&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) + (Pg(4) -&
+     &   Pt(4))*(kapt*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) - ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) +&
+     &   dcmplx(0d0,1d0)*(mt - Pg(1) + Pt(1))*(kap*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))))&
+     &   + dcmplx(0d0,1d0)*Eg(1)*((Pg(2) - Pt(2) + dcmplx(0d0,1d0)*(Pg(3) -&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) - dcmplx(0d0,1d0)*(mt + Pg(1) -&
+     &   Pt(1))*(kapt*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) - ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) -&
+     &   (Pg(4) - Pt(4))*(kap*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) -&
+     &   Pw(4))))))*Vt(1)) + (Eg(4)*(dcmplx(0d0,1d0)*(mt - Pg(1) +&
+     &   Pt(1))*(dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) + (Pg(4) -&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) - (Pg(2) - dcmplx(0d0,1d0)*Pg(3) -&
+     &   Pt(2) + dcmplx(0d0,1d0)*Pt(3))*(kapt*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))))&
+     &   + (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*((Pg(2) - Pt(2) + dcmplx(0d0,1d0)*(Pg(3) -&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) + (Pg(4) -&
+     &   Pt(4))*(kapt*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) - ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) +&
+     &   dcmplx(0d0,1d0)*(mt - Pg(1) + Pt(1))*(kap*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))))&
+     &   + dcmplx(0d0,1d0)*Eg(1)*((Pg(4) - Pt(4))*(dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4))) - kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) +&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))))&
+     &   + dcmplx(0d0,1d0)*(mt + Pg(1) - Pt(1))*(dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4))) + kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) +&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))))&
+     &   + (Pg(2) - dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(kap*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) -&
+     &   Pw(4))))))*Vt(2) - (Eg(1)*((Pg(2) - Pt(2) + dcmplx(0d0,1d0)*(Pg(3) -&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) + (Pg(4) -&
+     &   Pt(4))*(kapt*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) - ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) +&
+     &   dcmplx(0d0,1d0)*(mt - Pg(1) + Pt(1))*(kap*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))))&
+     &   + dcmplx(0d0,1d0)*(Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((Pg(4) -&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) + dcmplx(0d0,1d0)*(mt + Pg(1) -&
+     &   Pt(1))*(dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) + (Pg(2) - dcmplx(0d0,1d0)*Pg(3) -&
+     &   Pt(2) + dcmplx(0d0,1d0)*Pt(3))*(kap*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))))&
+     &   - dcmplx(0d0,1d0)*Eg(4)*((Pg(2) - Pt(2) + dcmplx(0d0,1d0)*(Pg(3) -&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) - dcmplx(0d0,1d0)*(mt + Pg(1) -&
+     &   Pt(1))*(kapt*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) - ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) -&
+     &   (Pg(4) - Pt(4))*(kap*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) -&
+     &   Pw(4))))))*Vt(3) + dcmplx(0d0,1d0)*(Eg(1)*((mt - Pg(1) +&
+     &   Pt(1))*(dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) - dcmplx(0d0,1d0)*(Pg(4) -&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) + dcmplx(0d0,1d0)*(Pg(2) -&
+     &   dcmplx(0d0,1d0)*Pg(3) - Pt(2) + dcmplx(0d0,1d0)*Pt(3))*(kapt*(((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pw(2) - Pw(3))) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4))) + dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4))))) + Eg(4)*((Pg(4) -&
+     &   Pt(4))*(dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) + dcmplx(0d0,1d0)*(mt + Pg(1) -&
+     &   Pt(1))*(dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) + (Pg(2) - dcmplx(0d0,1d0)*Pg(3) -&
+     &   Pt(2) + dcmplx(0d0,1d0)*Pt(3))*(kap*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))))&
+     &   + (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*((Pg(2) - Pt(2) + dcmplx(0d0,1d0)*(Pg(3) -&
+     &   Pt(3)))*(dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   kap*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) - dcmplx(0d0,1d0)*(mt + Pg(1) -&
+     &   Pt(1))*(kapt*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) - ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   dcmplx(0d0,1d0)*kap*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) -&
+     &   (Pg(4) - Pt(4))*(kap*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   dcmplx(0d0,1d0)*kapt*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) -&
+     &   Pw(4))))))*Vt(4)))/(sqrt2*v**2*(mt**2 - (Pg(1) - Pt(1))**2 + (Pg(2) - Pt(2))**2 +&
+     &   (Pg(3) - Pt(3))**2 + (Pg(4) - Pt(4))**2)*(mt**2 - (Pb(1) - Pw(1))**2 + (Pb(2) -&
+     &   Pw(2))**2 + (Pb(3) - Pw(3))**2 + (Pb(4) - Pw(4))**2))
+
+        amptt2 = (gs*mt*mw*(kapt*((Ph(2) + dcmplx(0d0,1d0)*Ph(3) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(1)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   Eg(4)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) - (Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) -&
+     &   (Ph(4) + Pt(4))*((Eg(2) + dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4))) + Eg(4)*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   Eg(1)*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt - Pb(1) +&
+     &   Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) - (mt + Ph(1) + Pt(1))*((Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   Eg(1)*(-(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1))) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) + Eg(4)*(((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4)))))*Vt(1) + dcmplx(0d0,1d0)*kap*((mt - Ph(1) - Pt(1))*((Eg(2)&
+     &   + dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) +&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   Eg(4)*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) - ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) - Eg(1)*(((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4)))) + (Ph(2) + dcmplx(0d0,1d0)*Ph(3) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(4)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   Eg(1)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) - (Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) -&
+     &   (Ph(4) + Pt(4))*((Eg(2) + dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4))) + Eg(1)*(-(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1))) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   Eg(4)*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt - Pb(1) +&
+     &   Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))))*Vt(1) - kapt*((Ph(4) +&
+     &   Pt(4))*(Eg(1)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt - Pb(1) +&
+     &   Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) - ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) + Eg(4)*(((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4))) - (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pw(2) - Pw(3))) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4)))) + (Ph(2) - dcmplx(0d0,1d0)*(Ph(3) + dcmplx(0d0,1d0)*Pt(2) +&
+     &   Pt(3)))*((Eg(2) + dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) +&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   Eg(4)*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) - ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) - Eg(1)*(((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4)))) - (mt + Ph(1) + Pt(1))*(Eg(4)*(((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4))) + Eg(1)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) +&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) -&
+     &   Pw(4)))))*Vt(2) - dcmplx(0d0,1d0)*kap*((mt - Ph(1) - Pt(1))*(Eg(1)*(((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4))) + Eg(4)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) +&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) +&
+     &   (Ph(4) + Pt(4))*(Eg(4)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   Eg(1)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) - (Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) +&
+     &   (Ph(2) - dcmplx(0d0,1d0)*(Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3)))*((Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   Eg(1)*(-(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1))) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) + Eg(4)*(((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4)))))*Vt(2) - dcmplx(0d0,1d0)*kap*((Ph(2) +&
+     &   dcmplx(0d0,1d0)*Ph(3) + Pt(2) + dcmplx(0d0,1d0)*Pt(3))*(Eg(1)*(((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4))) + Eg(4)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) +&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) -&
+     &   (Ph(4) + Pt(4))*((Eg(2) + dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4))) + Eg(4)*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   Eg(1)*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt - Pb(1) +&
+     &   Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) - (mt + Ph(1) + Pt(1))*((Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   Eg(1)*(-(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1))) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) + Eg(4)*(((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4)))))*Vt(3) - kapt*((mt - Ph(1) - Pt(1))*((Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) +&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   Eg(4)*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) - ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) - Eg(1)*(((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4)))) + (Ph(2) + dcmplx(0d0,1d0)*Ph(3) + Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(Eg(4)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   Eg(1)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) - (Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) -&
+     &   (Ph(4) + Pt(4))*((Eg(2) + dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4))) + Eg(1)*(-(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1))) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   Eg(4)*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt - Pb(1) +&
+     &   Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))))*Vt(3) +&
+     &   dcmplx(0d0,1d0)*kap*((Ph(4) + Pt(4))*(Eg(1)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2)&
+     &   - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   Eg(4)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) - (Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) +&
+     &   (Ph(2) - dcmplx(0d0,1d0)*(Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3)))*((Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) +&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   Eg(4)*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) - ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) - Eg(1)*(((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4)))) - (mt + Ph(1) + Pt(1))*(Eg(4)*(((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4))) + Eg(1)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) +&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) -&
+     &   Pw(4)))))*Vt(4) + kapt*((mt - Ph(1) - Pt(1))*(Eg(1)*(((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4))) + Eg(4)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) +&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) -&
+     &   (Eg(2) - dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt + Pb(1) - Pw(1)) - ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) -&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) +&
+     &   (Ph(4) + Pt(4))*(Eg(4)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   Eg(1)*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1)) - ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(2) -&
+     &   dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) - (Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) +&
+     &   ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4)))) +&
+     &   (Ph(2) - dcmplx(0d0,1d0)*(Ph(3) + dcmplx(0d0,1d0)*Pt(2) + Pt(3)))*((Eg(2) +&
+     &   dcmplx(0d0,1d0)*Eg(3))*(((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) +&
+     &   ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(2) - dcmplx(0d0,1d0)*Pb(3) - Pw(2) + dcmplx(0d0,1d0)*Pw(3)) -&
+     &   ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) +&
+     &   Eg(1)*(-(((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt + Pb(1) -&
+     &   Pw(1))) + ((DCONJG(Vb(1)) - DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   DCONJG(Vb(2))*(ECw(1) - ECw(4)) + DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) +&
+     &   dcmplx(0d0,1d0)*(Pb(3) + dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(Pb(4) - Pw(4))) + Eg(4)*(((DCONJG(Vb(2)) -&
+     &   DCONJG(Vb(4)))*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) -&
+     &   DCONJG(Vb(3))*(ECw(1) + ECw(4)))*(mt - Pb(1) + Pw(1)) + ((DCONJG(Vb(1)) -&
+     &   DCONJG(Vb(3)))*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(2))*(ECw(1) - ECw(4)) +&
+     &   DCONJG(Vb(4))*(-ECw(1) + ECw(4)))*(Pb(2) + dcmplx(0d0,1d0)*(Pb(3) +&
+     &   dcmplx(0d0,1d0)*Pw(2) - Pw(3))) + ((DCONJG(Vb(2)) - DCONJG(Vb(4)))*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3)) + DCONJG(Vb(1))*(ECw(1) + ECw(4)) - DCONJG(Vb(3))*(ECw(1) +&
+     &   ECw(4)))*(Pb(4) - Pw(4)))))*Vt(4)))/(sqrt2*v**2*(mt**2 - (Ph(1) + Pt(1))**2 +&
+     &   (Ph(2) + Pt(2))**2 + (Ph(3) + Pt(3))**2 + (Ph(4) + Pt(4))**2)*(mt**2 - (Pb(1) -&
+     &   Pw(1))**2 + (Pb(2) - Pw(2))**2 + (Pb(3) - Pw(3))**2 + (Pb(4) - Pw(4))**2))
+     
+        ampwt = (dcmplx(0d0,-1d0)*gs*mw*((-((Eg(2) + dcmplx(0d0,1d0)*Eg(3))*((mt - Pg(1) +&
+     &   Pt(1))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))) - (Pg(4) -&
+     &   Pt(4))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))) + (Pg(2) -&
+     &   dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))))) +&
+     &   Eg(1)*(-((Pg(2) - Pt(2) + dcmplx(0d0,1d0)*(Pg(3) -&
+     &   Pt(3)))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))))) + (mt + Pg(1) -&
+     &   Pt(1))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))) - (Pg(4) -&
+     &   Pt(4))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))))) -&
+     &   Eg(4)*((Pg(2) - Pt(2) + dcmplx(0d0,1d0)*(Pg(3) -&
+     &   Pt(3)))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))) + (mt - Pg(1) +&
+     &   Pt(1))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))) + (Pg(4) -&
+     &   Pt(4))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))))))*Vt(1) -&
+     &   (Eg(1)*(-((mt + Pg(1) - Pt(1))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) - dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))))) - (Pg(4) -&
+     &   Pt(4))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))) + (Pg(2) -&
+     &   dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))))) - Eg(4)*((mt -&
+     &   Pg(1) + Pt(1))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   2*a2WW*(Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))) - (Pg(4) -&
+     &   Pt(4))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))) + (Pg(2) -&
+     &   dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))))) + (Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*((Pg(2) - Pt(2) + dcmplx(0d0,1d0)*(Pg(3) -&
+     &   Pt(3)))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))) + (mt - Pg(1) +&
+     &   Pt(1))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))) + (Pg(4) -&
+     &   Pt(4))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))))))*Vt(2) +&
+     &   ((Eg(2) + dcmplx(0d0,1d0)*Eg(3))*(-((mt + Pg(1) -&
+     &   Pt(1))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))))) - (Pg(4) -&
+     &   Pt(4))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))) + (Pg(2) -&
+     &   dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))))) +&
+     &   Eg(4)*((Pg(2) - Pt(2) + dcmplx(0d0,1d0)*(Pg(3) -&
+     &   Pt(3)))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))) - (mt + Pg(1) -&
+     &   Pt(1))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))) + (Pg(4) -&
+     &   Pt(4))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))))) +&
+     &   Eg(1)*((Pg(2) - Pt(2) + dcmplx(0d0,1d0)*(Pg(3) -&
+     &   Pt(3)))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))) + (mt - Pg(1) +&
+     &   Pt(1))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))) + (Pg(4) -&
+     &   Pt(4))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))))))*Vt(3) -&
+     &   (Eg(4)*(-((mt + Pg(1) - Pt(1))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) +&
+     &   Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   a1WW*(Ph(2) + Pw(2) - dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) -&
+     &   ECw(2)*(Ph(2) + Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) -&
+     &   2*a2WW*(ECw(2) - dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) +&
+     &   Pw(2)) - Pw(3)*(Ph(3) + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))))) - (Pg(4) -&
+     &   Pt(4))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))) + (Pg(2) -&
+     &   dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))))) - Eg(1)*((mt -&
+     &   Pg(1) + Pt(1))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) +&
+     &   2*a2WW*(Pw(2) - dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))) - (Pg(4) -&
+     &   Pt(4))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4)))))) + (Pg(2) -&
+     &   dcmplx(0d0,1d0)*Pg(3) - Pt(2) +&
+     &   dcmplx(0d0,1d0)*Pt(3))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) +&
+     &   2*a2WW*(Pw(2) + dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))))) + (Eg(2) -&
+     &   dcmplx(0d0,1d0)*Eg(3))*(-((Pg(2) - Pt(2) + dcmplx(0d0,1d0)*(Pg(3) -&
+     &   Pt(3)))*(DCONJG(Vb(1))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(2) - dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) -&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) -&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) -&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) -&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,-1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) + dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   + dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(2))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(1) - ECw(4)) - a1WW*(Ph(1) - Ph(4) + Pw(1) -&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) - 2*a2WW*(ECw(3)*Ph(3)*Pw(1) -&
+     &   ECw(1)*Ph(2)*Pw(2) - ECw(1)*Pw(2)**2 - ECw(1)*Ph(3)*Pw(3) + ECw(3)*Pw(1)*Pw(3) -&
+     &   ECw(1)*Pw(3)**2 + ECw(2)*(Ph(2) + Pw(2))*(Pw(1) - Pw(4)) + ECw(1)*Ph(1)*Pw(4) -&
+     &   ECw(3)*Ph(3)*Pw(4) - ECw(1)*Ph(4)*Pw(4) + ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) -&
+     &   ECw(1)*Pw(4)**2 + ECw(4)*(-(Ph(1)*Pw(1)) + Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2) +&
+     &   Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 + Pw(1)*Pw(4))) - 2*a4WW*(-((ECw(1) -&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(2)*((-Ph(1) + Ph(4))*Pw(3) + Ph(3)*(Pw(1) -&
+     &   Pw(4))) + ECw(3)*((Ph(1) - Ph(4))*Pw(2) + Ph(2)*(-Pw(1) + Pw(4))))))) + (mt + Pg(1) -&
+     &   Pt(1))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4)))))) - (Pg(4) -&
+     &   Pt(4))*(DCONJG(Vb(2))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) -&
+     &   DCONJG(Vb(4))*(a1WW*mw**2*(ECw(2) + dcmplx(0d0,1d0)*ECw(3)) + 2*a2WW*(Pw(2) +&
+     &   dcmplx(0d0,1d0)*Pw(3))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - a1WW*(Ph(2) + Pw(2) +&
+     &   dcmplx(0d0,1d0)*(Ph(3) + Pw(3)))*(ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) + Pw(2)) -&
+     &   ECw(3)*(Ph(3) + Pw(3)) - ECw(4)*(Ph(4) + Pw(4))) - 2*a2WW*(ECw(2) +&
+     &   dcmplx(0d0,1d0)*ECw(3))*(Pw(1)*(Ph(1) + Pw(1)) - Pw(2)*(Ph(2) + Pw(2)) - Pw(3)*(Ph(3)&
+     &   + Pw(3)) - Pw(4)*(Ph(4) + Pw(4))) + 2*a4WW*(ECw(3)*Ph(4)*Pw(1) +&
+     &   dcmplx(0d0,1d0)*ECw(1)*Ph(4)*Pw(2) - ECw(1)*Ph(4)*Pw(3) +&
+     &   ECw(4)*(dcmplx(0d0,1d0)*Ph(2)*Pw(1) - Ph(3)*Pw(1) + Ph(1)*(dcmplx(0d0,-1d0)*Pw(2) +&
+     &   Pw(3))) - ECw(3)*Ph(1)*Pw(4) - dcmplx(0d0,1d0)*ECw(1)*Ph(2)*Pw(4) + ECw(1)*Ph(3)*Pw(4)&
+     &   - dcmplx(0d0,1d0)*ECw(2)*(Ph(4)*Pw(1) - Ph(1)*Pw(4)))) +&
+     &   DCONJG(Vb(1))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) + Pw(4))))) -&
+     &   DCONJG(Vb(3))*(a1WW*mw**2*(ECw(1) + ECw(4)) - a1WW*(Ph(1) + Ph(4) + Pw(1) +&
+     &   Pw(4))*(-(ECw(3)*Ph(3)) - ECw(4)*Ph(4) + ECw(1)*(Ph(1) + Pw(1)) - ECw(2)*(Ph(2) +&
+     &   Pw(2)) - ECw(3)*Pw(3) - ECw(4)*Pw(4)) + 2*a2WW*(-(ECw(3)*Ph(3)*Pw(1)) +&
+     &   ECw(1)*Ph(2)*Pw(2) + ECw(1)*Pw(2)**2 + ECw(1)*Ph(3)*Pw(3) - ECw(3)*Pw(1)*Pw(3) +&
+     &   ECw(1)*Pw(3)**2 + ECw(1)*Ph(1)*Pw(4) - ECw(3)*Ph(3)*Pw(4) + ECw(1)*Ph(4)*Pw(4) +&
+     &   ECw(1)*Pw(1)*Pw(4) - ECw(3)*Pw(3)*Pw(4) + ECw(1)*Pw(4)**2 - ECw(2)*(Ph(2) +&
+     &   Pw(2))*(Pw(1) + Pw(4)) + ECw(4)*(-(Ph(1)*Pw(1)) - Ph(4)*Pw(1) - Pw(1)**2 + Ph(2)*Pw(2)&
+     &   + Pw(2)**2 + Ph(3)*Pw(3) + Pw(3)**2 - Pw(1)*Pw(4))) + 2*a4WW*(-((ECw(1) +&
+     &   ECw(4))*(Ph(3)*Pw(2) - Ph(2)*Pw(3))) + ECw(3)*((Ph(1) + Ph(4))*Pw(2) - Ph(2)*(Pw(1) +&
+     &   Pw(4))) + ECw(2)*(-((Ph(1) + Ph(4))*Pw(3)) + Ph(3)*(Pw(1) +&
+     &   Pw(4))))))))*Vt(4)))/(sqrt2*v**2*(mt**2 - (Pg(1) - Pt(1))**2 + (Pg(2) - Pt(2))**2&
+     &   + (Pg(3) - Pt(3))**2 + (Pg(4) - Pt(4))**2)*(mw**2 - (Ph(1) + Pw(1))**2 + (Ph(2) +&
+     &   Pw(2))**2 + (Ph(3) + Pw(3))**2 + (Ph(4) + Pw(4))**2))
+
+         amp = ampts + ampws + amptt1 + amptt2 + ampwt
+
+      end subroutine gbb_tbwpHamp
+
+
+
+
+
+
+          subroutine vSpi_Dirac(p,m,i,f)
+          implicit none
+          integer i
+          real(8) m
+          complex(8) p(4)
+          complex(8) f(4),fc
+          real(8) p0,px,py,pz,fc2
+
+          p0=dreal(p(1))
+          px=dreal(p(2))
+          py=dreal(p(3))
+          pz=dreal(p(4))
+
+          fc2 = p0+m
+          fc=cdsqrt(dcmplx(fc2))
+!           fc=dsqrt(fc2)
+
+          if (i.eq.1) then
+            f(1)=pz*fc/fc2
+            f(2)=(px+(0d0,1d0)*py)*fc/fc2
+            f(3)=fc
+            f(4)=dcmplx(0d0,0d0)
+          elseif (i.eq.-1) then
+            f(1)=(px-(0d0,1d0)*py)*fc/fc2
+            f(2)=-pz*fc/fc2
+            f(3)=dcmplx(0d0,0d0)
+            f(4)=fc
+          else
+              print *, "wrong helicity setting in vSpi"
+          endif
+
+          return
+          end SUBROUTINE
+
+
+
+SUBROUTINE TopDecay(Flavor,Mom,Spinor,TopHel)
+implicit none
+real(8) :: Mom(1:4,1:3)
+integer :: flavor
+integer,optional :: TopHel
+complex(8) :: Spinor(1:4)
+real(8) :: TopMom(1:4),NWAFactor_Top
+complex(8) :: Spi(1:4),BarSpi(1:4),BotSpi(1:4),WCurr(1:4)
+real(8) :: NWAFactor_W
+complex(8) :: WProp
+include 'includeVars.F90'
+
+NWAFactor_W   = 1d0/dsqrt(2d0*Ga_W*m_W)
+WProp = (0d0,-1d0)*NWAFactor_W
+
+
+
+    TopMom(1:4) = Mom(1:4,1)+Mom(1:4,2)+Mom(1:4,3)
+    if( TOPDECAYS.eq.0 ) then
+        Spinor(1:4) = 0d0
+        RETURN
+    endif
+    NWAFactor_Top = 1d0/dsqrt(2d0*Ga_Top*m_Top)
+
+
+    if( Flavor.eq.Top_ ) then ! Top quark decay
+!       assemble lepton current
+        call ubarSpi_Weyl(dcmplx(Mom(1:4,1)),-1,BotSpi(1:4))  ! bot
+        call    vSpi_Weyl(dcmplx(Mom(1:4,2)),+1,Spi(1:4))     ! l+ or dn_bar
+        call ubarSpi_Weyl(dcmplx(Mom(1:4,3)),-1,BarSpi(1:4))  ! nu or up
+        WCurr(1:4)  = vbqq_Weyl(BarSpi(1:4),Spi(1:4)) * WProp * gwsq ! vbqq introduces -i/Sqrt(2)
+
+!       connect to quark current
+        BarSpi(1:4) = BotSpi(1:4)
+        Spinor(1:4) = vgq_Weyl( WCurr(1:4),BarSpi(1:4) ) ! vgq introduces -i/Sqrt(2)
+        Spinor(1:4) =( spb2_Weyl(Spinor(1:4),dcmplx(TopMom(1:4))) + m_Top*Spinor(1:4) ) * NWAFactor_Top
+        Spinor(1:4) = WeylToDirac(Spinor(1:4))
+    elseif( Flavor.eq.ATop_ ) then ! Anti-Top quark decay
+!       assemble lepton current
+        call    vSpi_Weyl(dcmplx(Mom(1:4,1)),+1,BotSpi(1:4))  ! Abot
+        call ubarSpi_Weyl(dcmplx(Mom(1:4,2)),-1,BarSpi(1:4))  ! l- or dn
+        call    vSpi_Weyl(dcmplx(Mom(1:4,3)),+1,Spi(1:4))     ! nubar or up_bar
+        WCurr(1:4)  = vbqq_Weyl(BarSpi(1:4),Spi(1:4)) * WProp * gwsq ! vbqq introduces -i/Sqrt(2)
+
+!       connect to quark current:
+        Spi(1:4) = BotSpi(1:4)
+        Spinor(1:4) = vbqg_Weyl( Spi(1:4),WCurr(1:4) )! vbqg introduces -i/Sqrt(2)
+        Spinor(1:4) = ( spi2_Weyl(dcmplx(TopMom(1:4)),Spinor(1:4)) - m_Top*Spinor(1:4) ) * NWAFactor_Top
+        Spinor(1:4) = WeylToDirac(Spinor(1:4))
+    endif
+
+
+RETURN
+END SUBROUTINE
+
+
+
+
+
+
+SUBROUTINE WDecay(Charge,Mom,WCurr)
+implicit none
+real(8) :: Mom(1:4,1:2)
+integer :: Charge
+real(8) :: WMom(1:4)
+complex(8) :: Spi(1:4),BarSpi(1:4),BotSpi(1:4),WCurr(1:4)
+real(8) :: NWAFactor_W
+complex(8) :: WProp
+include 'includeVars.F90'
+
+NWAFactor_W   = 1d0/dsqrt(2d0*Ga_W*m_W)
+WProp = (0d0,-1d0)*dsqrt(gwsq)*NWAFactor_W
+
+
+
+    WMom(1:4) = Mom(1:4,1)+Mom(1:4,2)
+    if( TOPDECAYS.eq.0 ) then
+        WCurr(1:4) = 0d0
+        RETURN
+    endif
+
+
+    if( Charge.eq.Wp_ ) then ! W+ decay
+!       assemble lepton current
+        call    vSpi_Weyl(dcmplx(Mom(1:4,1)),+1,Spi(1:4))     ! l+ or dn_bar
+        call ubarSpi_Weyl(dcmplx(Mom(1:4,2)),-1,BarSpi(1:4))  ! nu or up
+        WCurr(1:4)  = vbqq_Weyl(BarSpi(1:4),Spi(1:4)) * WProp ! vbqq introduces -i/Sqrt(2)
+        
+    elseif( Charge.eq.Wm_ ) then ! W- decay
+!       assemble lepton current
+        call ubarSpi_Weyl(dcmplx(Mom(1:4,1)),-1,BarSpi(1:4))  ! l- or dn
+        call    vSpi_Weyl(dcmplx(Mom(1:4,2)),+1,Spi(1:4))     ! nubar or up_bar
+        WCurr(1:4)  = vbqq_Weyl(BarSpi(1:4),Spi(1:4)) * WProp ! vbqq introduces -i/Sqrt(2)
+        
+    endif
+
+
+RETURN
+END SUBROUTINE
+
+
+
+
+          SUBROUTINE ubarSpi_Weyl(p,i,ubarSpi)  ! i=+1 is ES to Chir_Weyl(.false.), i=-1 is ES to Chir_Weyl(.true.)
+          implicit none
+          integer, intent(in):: i
+          complex(8), intent(in) :: p(4)
+          complex(8) :: ubarSpi(4)
+          complex(8) :: ephi
+          real(8) :: p0,px,py,pz
+          complex(8) :: fc, fc2
+
+          p0=dreal(p(1))
+          px=dreal(p(2))
+          py=dreal(p(3))
+          pz=dreal(p(4))
+
+         fc2 = p0 + pz
+         fc=cdsqrt(fc2)
+
+         if (cdabs(fc2).gt.1D-15) then
+
+         if (i.eq.1) then
+            ubarSpi(1)=(0d0,0d0)
+            ubarSpi(2)=(0d0,0d0)
+            ubarSpi(3)=fc
+            ubarSpi(4)=(px-(0d0,1d0)*py)/fc
+         elseif (i.eq.-1) then
+            ubarSpi(1)=(px+(0d0,1d0)*py)/fc
+            ubarSpi(2)=-fc
+            ubarSpi(3)=(0d0,0d0)
+            ubarSpi(4)=(0d0,0d0)
+         else
+          call Error("wrong helicity setting in ubarSpi_Weyl")
+         endif
+
+         else
+
+         if (i.eq.1) then
+            ubarSpi(1) = (0d0,0d0)
+            ubarSpi(2) = (0d0,0d0)
+            ubarSpi(3) = (0d0,0d0)
+            ubarSpi(4) = dsqrt(2d0*p0)
+         elseif (i.eq.-1) then
+            ubarSpi(1) = dsqrt(2d0*p0)
+            ubarSpi(2) = (0d0,0d0)
+            ubarSpi(3) = (0d0,0d0)
+            ubarSpi(4) = (0d0,0d0)
+         else
+            call Error("wrong helicity setting in ubarSpi_Weyl")
+         endif
+
+         endif
+        return
+        END SUBROUTINE
+
+
+
+
+
+          SUBROUTINE vSpi_Weyl(p,i,vSpi)  ! i=+1 is ES to Chir_Weyl(.false.), i=-1 is ES to Chir_Weyl(.true.)
+          implicit none
+          integer, intent(in):: i
+          complex(8), intent(in) :: p(4)
+          complex(8) :: vSpi(4)
+          complex(8) :: ephi
+          real(8) :: p0,px,py,pz
+          real(8) :: nx,ny,nz,theta,phi
+          real(8) :: ct,ct2,st,st2,cphi,sphi
+          complex(8) :: fc2, fc
+
+          p0=dreal(p(1))
+          px=dreal(p(2))
+          py=dreal(p(3))
+          pz=dreal(p(4))
+
+         fc2 = p0 + pz
+         fc=cdsqrt(fc2)
+
+         if (cdabs(fc2).gt.1D-15) then
+
+         if (i.eq.1) then
+            vSpi(1)=(0d0,0d0)
+            vSpi(2)=(0d0,0d0)
+            vSpi(3)=(px-(0d0,1d0)*py)/fc
+            vSpi(4)=-fc
+         elseif (i.eq.-1) then
+            vSpi(1)=fc
+            vSpi(2)=(px+(0d0,1d0)*py)/fc
+            vSpi(3)=(0d0,0d0)
+            vSpi(4)=(0d0,0d0)
+         else
+            call Error("wrong helicity setting in vSpi_Weyl")
+         endif
+
+         else
+
+         if (i.eq.1) then
+            vSpi(1)=(0d0,0d0)
+            vSpi(2)=(0d0,0d0)
+            vSpi(3)=dsqrt(2d0*p0)
+            vSpi(4)=(0d0,0d0)
+         elseif (i.eq.-1) then
+            vSpi(1)=(0d0,0d0)
+            vSpi(2)=dsqrt(2d0*p0)
+            vSpi(3)=(0d0,0d0)
+            vSpi(4)=(0d0,0d0)
+         else
+            call Error("wrong helicity setting in vSpi_Weyl")
+         endif
+
+         endif
+
+         RETURN
+         END SUBROUTINE
+
+
+
+  function pol_mless(p,i,outgoing)
+  implicit none
+    complex(dp), intent(in)    :: p(4)
+    integer, intent(in)          :: i
+    logical, intent(in),optional :: outgoing
+    ! -------------------------------
+    integer :: pol
+    real(dp) :: p0,px,py,pz
+    real(dp) :: pv,ct,st,cphi,sphi
+    complex(dp) :: pol_mless(4)
+    real(8), parameter :: sqrt2 = 1.4142135623730950488016887242096980786d0
+    complex(8), parameter :: czero = dcmplx(0d0,0d0), ci=dcmplx(0d0,1d0)
+
+!^^^IFmp
+!    p0=(p(1)+conjg(p(1)))/two
+!    px=(p(2)+conjg(p(2)))/two
+!    py=(p(3)+conjg(p(3)))/two
+!    pz=(p(4)+conjg(p(4)))/two
+!^^^ELSE
+    p0=real(p(1),dp)
+    px=real(p(2),dp)
+    py=real(p(3),dp)
+    pz=real(p(4),dp)
+!^^^END
+
+
+    pv=sqrt(abs(p0**2))
+    ct=pz/pv
+    st=sqrt(abs(1.0_dp-ct**2))
+
+    if (st < tol) then
+       cphi=1.0_dp
+       sphi=0.0_dp
+    else
+       cphi= px/pv/st
+       sphi= py/pv/st
+    endif
+
+
+    ! -- distinguish between positive and negative energies
+    if ( p0 > 0.0_dp) then
+       pol=i
+    else
+       pol=-i
+    endif
+
+    ! -- take complex conjugate for outgoing
+    if (present(outgoing)) then
+       if (outgoing) pol = -pol
+    endif
+
+    pol_mless(1)=czero
+    pol_mless(2)=ct*cphi/sqrt2 - ci*pol*sphi/sqrt2
+    pol_mless(3)=ct*sphi/sqrt2 + ci*pol*cphi/sqrt2
+    pol_mless(4)=-st/sqrt2
+
+  end function pol_mless
+  
+  
+   function pol_mass(p,i,outgoing)
+   implicit none
+   integer, intent(in) :: i
+   integer :: pol
+   complex(8), intent(in) :: p(4)
+   logical, intent(in),optional :: outgoing
+   complex(8) :: pol_mass(4)
+   complex(8) :: msq,m
+   real(8) :: p0,px,py,pz, pv,pvsq
+   real(8) :: ct,st,cphi,sphi
+   real(8), parameter :: sqrt2 = 1.4142135623730950488016887242096980786d0   
+   complex(8), parameter :: czero = dcmplx(0d0,0d0), ci=dcmplx(0d0,1d0), cone=dcmplx(1d0,0d0)   
+
+      p0=dreal(p(1))
+      px=dreal(p(2))
+      py=dreal(p(3))
+      pz=dreal(p(4))
+
+      pv=px**2 + py**2 + pz**2
+      m=p0**2-pv
+      m=sqrt(m)
+      pv=sqrt(pv)
+
+      if(cdabs(pv/m).lt.1d-8) then
+         if(i.eq.0) then
+            pol_mass(1:3)=czero
+            pol_mass( 4 )=cone
+            return
+         endif
+         ct = 1d0; st=0d0
+      else
+         ct= pz/pv
+         st= dsqrt(dabs(1.0d0-ct**2))
+      endif
+
+
+      if (st .lt. 1D-15) then
+         cphi=1.0d0
+         sphi=0d0
+      else
+         cphi= px/pv/st
+         sphi= py/pv/st
+      endif
+
+
+!     i=0 is longitudinal polarization
+!     the following ifstatement distinguishes between
+!     positive and negative energies
+      if ( p0 .gt. 0.0d0) then
+         pol=i
+      else
+         pol=-i
+      endif
+
+      ! -- take complex conjugate for outgoing
+      if (present(outgoing)) then
+         if (outgoing) pol = -pol
+      endif
+
+      if(pol.eq.-1 .or. pol.eq.1) then
+         pol_mass(1)=czero
+         pol_mass(2)=(ct*cphi-pol*ci*sphi)/sqrt2
+         pol_mass(3)=(ct*sphi+pol*ci*cphi)/sqrt2
+         pol_mass(4)=-st/sqrt2
+      else if(pol.eq.0) then
+         pol_mass(1)= pv/m
+         pol_mass(2)= p0/m/pv*px
+         pol_mass(3)= p0/m/pv*py
+         pol_mass(4)= p0/m/pv*pz
+      else
+         print *,"wrong helicity setting in pol_mass"
+         stop
+      endif
+
+   end function pol_mass
+
+
+
+
+        FUNCTION vbqg_Weyl(sp,e1)
+        implicit none
+        complex(8), intent(in) :: e1(:)
+        complex(8), intent(in) :: sp(:)
+        complex(8) :: vbqg_Weyl(size(sp))
+        real(8), parameter :: sqrt2 = 1.4142135623730950488016887242096980786d0
+
+            vbqg_Weyl = (0d0,-1d0)/sqrt2*spi2_Weyl(e1,sp)
+
+        END FUNCTION
+
+
+
+
+        FUNCTION vbqq_Weyl(sp1,sp2)
+        implicit none
+        complex(8), intent(in) :: sp1(:), sp2(:)
+        integer, parameter ::  Dv=4
+        integer :: i
+        complex(8) :: vbqq_Weyl(Dv)
+        complex(8) :: rr, va(Dv),sp1a(size(sp1))
+        real(8), parameter :: sqrt2 = 1.4142135623730950488016887242096980786d0
+
+            va=(0d0,0d0)
+            vbqq_Weyl=(0d0,0d0)
+
+            do i=1,Dv
+              if (i.eq.1) then
+                va(1)=(1d0,0d0)
+              else
+                va(i)=(-1d0,0d0)
+              endif
+              sp1a=spb2_Weyl(sp1,va)
+
+              rr=(0d0,-1d0)/sqrt2*psp1_(sp1a,sp2)
+              if (i.eq.1) then
+                    vbqq_Weyl = vbqq_Weyl + rr*va
+                else
+                    vbqq_Weyl = vbqq_Weyl - rr*va
+              endif
+              va(i)=(0d0,0d0)
+            enddo
+
+        END FUNCTION
+
+
+
+        function vgq_Weyl(e1,sp)
+        implicit none
+        complex(8), intent(in) :: e1(:)
+        complex(8), intent(in) :: sp(:)
+        complex(8) :: vgq_Weyl(size(sp))
+        real(8), parameter :: sqrt2 = 1.4142135623730950488016887242096980786d0
+
+            vgq_Weyl = (0d0,-1d0)/sqrt2*spb2_Weyl(sp,e1)
+
+        end function
+
+
+
+
+
+      function spb2_Weyl(sp,v)
+      implicit none
+      complex(8), intent(in) :: sp(:),v(:)
+      integer, parameter ::  Dv=4, Ds=4
+      complex (8) :: spb2_Weyl(size(sp))
+      complex(8) :: x0(4,4),xx(4,4),xy(4,4)
+      complex(8) :: xz(4,4),x5(4,4)
+      complex(8) :: y1,y2,y3,y4,bp,bm,cp,cm
+      integer :: i,i1,i2,i3,imax
+
+
+
+      imax = Ds/4
+
+           do i=1,imax
+           i1= 1+4*(i-1)
+           i2=i1+3
+
+           y1=sp(i1)
+           y2=sp(i1+1)
+           y3=sp(i1+2)
+           y4=sp(i1+3)
+
+           x0(1,i)=y3
+           x0(2,i)=y4
+           x0(3,i)=y1
+           x0(4,i)=y2
+
+           xx(1,i) = y4
+           xx(2,i) = y3
+           xx(3,i) = -y2
+           xx(4,i) = -y1
+
+           xy(1,i)=(0d0,1d0)*y4
+           xy(2,i)=-(0d0,1d0)*y3
+           xy(3,i)=-(0d0,1d0)*y2
+           xy(4,i)=(0d0,1d0)*y1
+
+           xz(1,i)=y3
+           xz(2,i)=-y4
+           xz(3,i)=-y1
+           xz(4,i)=y2
+
+           x5(1,i)=y1
+           x5(2,i)=y2
+           x5(3,i)=-y3
+           x5(4,i)=-y4
+
+           enddo
+
+
+
+           do i=1,4
+
+           spb2_Weyl(i)=v(1)*x0(i,1)-v(2)*xx(i,1)-v(3)*xy(i,1)-v(4)*xz(i,1)
+
+           enddo
+
+
+           end function
+
+
+
+
+
+         function spi2_Weyl(v,sp)
+         implicit none
+         complex(8), intent(in) :: sp(:),v(:)
+         complex(8) :: spi2_Weyl(size(sp))
+         integer, parameter ::  Dv=4,Ds=4
+         complex(8) :: x0(4,4),xx(4,4),xy(4,4)
+         complex(8) :: xz(4,4),x5(4,4)
+         complex(8) ::  y1,y2,y3,y4,bp,bm,cp,cm
+         integer :: i,i1,i2,i3,imax
+
+
+         imax = Ds/4
+
+           do i=1,imax
+           i1= 1+4*(i-1)
+           i2=i1+3
+
+           y1=sp(i1)
+           y2=sp(i1+1)
+           y3=sp(i1+2)
+           y4=sp(i1+3)
+
+           x0(1,i)=y3
+           x0(2,i)=y4
+           x0(3,i)=y1
+           x0(4,i)=y2
+
+
+           xx(1,i) = -y4
+           xx(2,i) = -y3
+           xx(3,i) = y2
+           xx(4,i) = y1
+
+
+           xy(1,i)=(0d0,1d0)*y4
+           xy(2,i)=-(0d0,1d0)*y3
+           xy(3,i)=-(0d0,1d0)*y2
+           xy(4,i)=(0d0,1d0)*y1
+
+           xz(1,i)=-y3
+           xz(2,i)=y4
+           xz(3,i)=y1
+           xz(4,i)=-y2
+
+           x5(1,i)=y1
+           x5(2,i)=y2
+           x5(3,i)=-y3
+           x5(4,i)=-y4
+
+           enddo
+
+
+           do i=1,4
+
+           spi2_Weyl(i)=v(1)*x0(i,1)-v(2)*xx(i,1) -v(3)*xy(i,1)-v(4)*xz(i,1)
+           enddo
+
+
+           end function
+
+
+
+          function WeylToDirac(sp)   ! unitary transformation U to convert a Weyl spinor into the Dirac representation
+          implicit none              ! sp can be spinor or bar-spinor, i.e. U^dagger.sp = barsp.U
+          double complex :: sp(1:4)
+          double complex :: WeylToDirac(1:4)
+          double precision,parameter :: SqrtFac=1d0/dsqrt(2d0)
+
+              WeylToDirac(1) = SqrtFac*(sp(1)+sp(3))
+              WeylToDirac(2) = SqrtFac*(sp(2)+sp(4))
+              WeylToDirac(3) = SqrtFac*(sp(1)-sp(3))
+              WeylToDirac(4) = SqrtFac*(sp(2)-sp(4))
+          return
+          end function
+
+
+
+
+          function psp1_(sp1,sp2) result(res)
+          implicit none
+          complex(8), intent(in) :: sp1(:)
+          complex(8), intent(in) :: sp2(:)
+          complex(8) :: res
+
+            res = sum(sp1(1:)*sp2(1:))
+
+           end function
     
     
     
