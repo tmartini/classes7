@@ -191,8 +191,8 @@ include 'includeVars.F90'
       Res = 0d0
       call EvalAmp_GB_TWMH(Mom,TTBHcoupl,TopDecays,LO_Res_Unpol)
       Res = Res &
-            + LO_Res_Unpol(pdfGlu_,Bot_)   *  NNpdf(1,pdfGlu_)*NNpdf(2,Bot_)     &
-            + LO_Res_Unpol(Bot_,pdfGlu_)   *  NNpdf(1,Bot_)*NNpdf(2,pdfGlu_)
+            + LO_Res_Unpol(0,Bot_)   *  NNpdf(1,0)*NNpdf(2,Bot_)     &
+            + LO_Res_Unpol(Bot_,0)   *  NNpdf(1,Bot_)*NNpdf(2,0)
 
       Res = Res/x1/x2/(2d0*E_CMS**2)
             
@@ -242,8 +242,8 @@ include 'includeVars.F90'
       Res = 0d0
       call EvalAmp_GBB_TBWPH(Mom,TTBHcoupl,TopDecays,LO_Res_Unpol)
       Res = Res &
-            + LO_Res_Unpol(pdfGlu_,ABot_)   *  NNpdf(1,pdfGlu_)*NNpdf(2,ABot_)     &
-            + LO_Res_Unpol(ABot_,pdfGlu_)   *  NNpdf(1,ABot_)*NNpdf(2,pdfGlu_)
+            + LO_Res_Unpol(0,ABot_)   *  NNpdf(1,0)*NNpdf(2,ABot_)     &
+            + LO_Res_Unpol(ABot_,0)   *  NNpdf(1,ABot_)*NNpdf(2,0)
 
       Res = Res/x1/x2/(2d0*E_CMS**2)
             
@@ -640,7 +640,7 @@ complex(8) :: UBbD(4),UBbD2(4),Eg(4),Eg2(4),UBtD(4),ECw(4)
 complex(8) :: TTBHcoupl(1:2)
 integer, parameter :: iL=1,iR=2, H=3, t=4, w=5, bt=6,Wt=7,lept=8,nut=9, lepW=10,nuW=11
 integer :: i,j,bhel,thel,gpol,wpol,theld=-1,wpold=-1
-real(8), parameter :: sqrt2 = 1.4142135623730950488016887242096980786d0
+! real(8), parameter :: sqrt2 = 1.4142135623730950488016887242096980786d0
 include 'includeVars.F90'
 
 !outgoing->incoming
@@ -713,11 +713,11 @@ integer :: TopDecays! 0=stable, 1=di-leptonic
 real(8) :: MomExt(1:4,1:11),LO_Res_UnPol(-6:6,-6:6)
 complex(8) :: LOAmpab=0d0, LOAmpba=0d0
 
-complex(8) :: UBbD(4),UBbD2(4),Eg(4),Eg2(4),UBtD(4),ECw(4)
+complex(8) :: VbD(4),Eg(4),VbD2(4),Eg2(4),VtD(4),ECw(4)
 complex(8) :: TTBHcoupl(1:2)
 integer, parameter :: iL=1,iR=2, H=3, t=4, w=5, bt=6,Wt=7,lept=8,nut=9, lepW=10,nuW=11
 integer :: i,j,bhel,thel,gpol,wpol,theld=-1,wpold=-1
-real(8), parameter :: sqrt2 = 1.4142135623730950488016887242096980786d0
+! real(8), parameter :: sqrt2 = 1.4142135623730950488016887242096980786d0
 include 'includeVars.F90'
 
 !outgoing->incoming
@@ -1134,42 +1134,6 @@ subroutine spinoru(N,p,za,zb,s)
       enddo
 
     end subroutine spinoru
-    
-    
-          subroutine ubarSpi_Dirac(p,m,i,f)
-          implicit none
-          integer i
-          real(8) m
-          complex(8) p(4)
-          complex(8) f(4),fc
-          real(8)  p0,px,py,pz,fc2
-
-          p0=dreal(p(1))
-          px=dreal(p(2))
-          py=dreal(p(3))
-          pz=dreal(p(4))
-
-          fc2=p0+m
-          fc=cdsqrt( dcmplx(fc2))
-!           fc=dsqrt(fc2)
-
-          if (i.eq.1) then
-            f(1)=fc
-            f(2)=dcmplx(0d0,0d0)
-            f(3)=-1d0*pz*fc/fc2
-            f(4)=-(px-(0d0,1d0)*py)*fc/fc2
-          elseif (i.eq.-1) then
-            f(1)=dcmplx(0d0,0d0)
-            f(2)=fc
-            f(3)=-(px+(0d0,1d0)*py)*fc/fc2
-            f(4)=pz*fc/fc2
-          else
-              print *, "wrong helicity setting in ubarSpi"
-              stop
-          endif
-
-          return
-          end subroutine
 
 
 
@@ -1180,7 +1144,7 @@ subroutine spinoru(N,p,za,zb,s)
         real(8)    :: Pg(4),Pb(4),Pt(4),Pw(4),Ph(4)
         complex(8) :: UBb(4),Eg(4),UBt(4),ECw(4)
         complex(8) :: amp,ampts,ampws,amptt1,amptt2,ampwt
-        real(8)    :: mt,mw,v
+        real(8)    :: mt,mw,v, gs
         complex(8)    :: kap,kapt,a1WW,a2WW,a4WW   
         complex(8) TTBHcoupl(1:2)
         include 'includeVars.F90'            
@@ -1189,6 +1153,8 @@ subroutine spinoru(N,p,za,zb,s)
         mw=M_W
         mt=m_Top
         v=vev
+        
+        gs=dsqrt(4d0*Pi*alphas);
         
         kap=TTBHcoupl(1)
         kapt=TTBHcoupl(2)
@@ -4559,7 +4525,7 @@ subroutine spinoru(N,p,za,zb,s)
         real(8)    :: Pg(4),Pb(4),Pt(4),Pw(4),Ph(4)
         complex(8) :: Vb(4),Eg(4),Vt(4),ECw(4)
         complex(8) :: amp,ampts,ampws,amptt1,amptt2,ampwt
-        real(8)    :: mt,mw,v
+        real(8)    :: mt,mw,v, gs
         complex(8)    :: kap,kapt,a1WW,a2WW,a4WW  
         complex(8) TTBHcoupl(1:2)
         include 'includeVars.F90'            
@@ -4568,6 +4534,8 @@ subroutine spinoru(N,p,za,zb,s)
         mw=M_W
         mt=m_Top
         v=vev
+        
+        gs=dsqrt(4d0*Pi*alphas);
         
         kap=TTBHcoupl(1)
         kapt=TTBHcoupl(2)
@@ -8015,6 +7983,41 @@ subroutine spinoru(N,p,za,zb,s)
 
 
 
+    
+          subroutine ubarSpi_Dirac(p,m,i,f)
+          implicit none
+          integer i
+          real(8) m
+          complex(8) p(4)
+          complex(8) f(4),fc
+          real(8)  p0,px,py,pz,fc2
+
+          p0=dreal(p(1))
+          px=dreal(p(2))
+          py=dreal(p(3))
+          pz=dreal(p(4))
+
+          fc2=p0+m
+          fc=cdsqrt( dcmplx(fc2))
+!           fc=dsqrt(fc2)
+
+          if (i.eq.1) then
+            f(1)=fc
+            f(2)=dcmplx(0d0,0d0)
+            f(3)=-1d0*pz*fc/fc2
+            f(4)=-(px-(0d0,1d0)*py)*fc/fc2
+          elseif (i.eq.-1) then
+            f(1)=dcmplx(0d0,0d0)
+            f(2)=fc
+            f(3)=-(px+(0d0,1d0)*py)*fc/fc2
+            f(4)=pz*fc/fc2
+          else
+              print *, "wrong helicity setting in ubarSpi"
+              stop
+          endif
+
+          return
+          end subroutine
 
 
 
@@ -8072,10 +8075,7 @@ WProp = (0d0,-1d0)*NWAFactor_W
 
 
     TopMom(1:4) = Mom(1:4,1)+Mom(1:4,2)+Mom(1:4,3)
-    if( TOPDECAYS.eq.0 ) then
-        Spinor(1:4) = 0d0
-        RETURN
-    endif
+
     NWAFactor_Top = 1d0/dsqrt(2d0*Ga_Top*m_Top)
 
 
@@ -8130,10 +8130,6 @@ WProp = (0d0,-1d0)*dsqrt(gwsq)*NWAFactor_W
 
 
     WMom(1:4) = Mom(1:4,1)+Mom(1:4,2)
-    if( TOPDECAYS.eq.0 ) then
-        WCurr(1:4) = 0d0
-        RETURN
-    endif
 
 
     if( Charge.eq.Wp_ ) then ! W+ decay
@@ -8274,15 +8270,15 @@ END SUBROUTINE
 
   function pol_mless(p,i,outgoing)
   implicit none
-    complex(dp), intent(in)    :: p(4)
+    complex(8), intent(in)    :: p(4)
     integer, intent(in)          :: i
     logical, intent(in),optional :: outgoing
     ! -------------------------------
     integer :: pol
-    real(dp) :: p0,px,py,pz
-    real(dp) :: pv,ct,st,cphi,sphi
-    complex(dp) :: pol_mless(4)
-    real(8), parameter :: sqrt2 = 1.4142135623730950488016887242096980786d0
+    real(8) :: p0,px,py,pz
+    real(8) :: pv,ct,st,cphi,sphi
+    complex(8) :: pol_mless(4)
+     real(8), parameter :: sqrt2 = 1.4142135623730950488016887242096980786d0
     complex(8), parameter :: czero = dcmplx(0d0,0d0), ci=dcmplx(0d0,1d0)
 
 !^^^IFmp
@@ -8291,20 +8287,20 @@ END SUBROUTINE
 !    py=(p(3)+conjg(p(3)))/two
 !    pz=(p(4)+conjg(p(4)))/two
 !^^^ELSE
-    p0=real(p(1),dp)
-    px=real(p(2),dp)
-    py=real(p(3),dp)
-    pz=real(p(4),dp)
+    p0=real(p(1),8)
+    px=real(p(2),8)
+    py=real(p(3),8)
+    pz=real(p(4),8)
 !^^^END
 
 
     pv=sqrt(abs(p0**2))
     ct=pz/pv
-    st=sqrt(abs(1.0_dp-ct**2))
+    st=sqrt(abs(1.0d0-ct**2))
 
-    if (st < tol) then
-       cphi=1.0_dp
-       sphi=0.0_dp
+    if (st < 0.0000001d0) then
+       cphi=1.0d0
+       sphi=0.0d0
     else
        cphi= px/pv/st
        sphi= py/pv/st
@@ -8312,7 +8308,7 @@ END SUBROUTINE
 
 
     ! -- distinguish between positive and negative energies
-    if ( p0 > 0.0_dp) then
+    if ( p0 > 0.0d0) then
        pol=i
     else
        pol=-i
