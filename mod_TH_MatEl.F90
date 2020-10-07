@@ -6,7 +6,7 @@ IMPLICIT NONE
  public :: EvalAmp_QB_TH, EvalAmp_QbarBbar_TbarH  ! t-channel
  public :: EvalAmp_QQB_THBbar,EvalAmp_QQB_TbarHB  ! s-channel
   
- public :: EvalXSec_PP_TWMH,EvalXSec_PP_TBWPH     ! hadronic
+ public :: EvalXSec_PP_TWMH,EvalXSec_PP_TBWPH, EvalXSec_PP_TWH     ! hadronic
  public :: EvalAmp_GB_TWMH,EvalAmp_GBB_TBWPH      ! tw-channel
  
  private
@@ -151,6 +151,22 @@ include 'includeVars.F90'
       Mom(1,1:2) = -0.5d0*Collider_Energy
       Mom(4,1)   = -0.5d0*Collider_Energy * sign(1d0,Mom(4,2))
       Mom(4,2)   = +0.5d0*Collider_Energy * sign(1d0,Mom(4,2))
+  
+RETURN
+END SUBROUTINE
+
+
+SUBROUTINE EvalXSec_PP_TWH(Mom,TTBHcoupl,TopDecays,Res)
+implicit none
+real(8) :: Mom(1:4,1:11),Res, Rest, Restb
+complex(8) :: TTBHcoupl(1:2)
+integer :: TopDecays! 0=stable, 1=di-leptonic
+
+call EvalXSec_PP_TWMH(Mom,TTBHcoupl,TopDecays,Rest)
+call EvalXSec_PP_TBWPH(Mom,TTBHcoupl,TopDecays,Restb)
+
+Res=Rest+Restb
+      
   
 RETURN
 END SUBROUTINE
