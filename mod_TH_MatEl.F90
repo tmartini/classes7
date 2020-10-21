@@ -207,8 +207,8 @@ include 'includeVars.F90'
       Res = 0d0
       call EvalAmp_GB_TWMH(Mom,TTBHcoupl,TopDecays,LO_Res_Unpol)
       Res = Res &
-            + LO_Res_Unpol(0,Bot_)   *  NNpdf(1,0)*NNpdf(2,Bot_)     &
-            + LO_Res_Unpol(Bot_,0)   *  NNpdf(1,Bot_)*NNpdf(2,0)
+            + LO_Res_Unpol(0,Bot_)   *  NNpdf(1,0)*NNpdf(2,5)     &
+            + LO_Res_Unpol(Bot_,0)   *  NNpdf(1,5)*NNpdf(2,0)
 
       Res = Res/x1/x2/(2d0*E_CMS**2)
             
@@ -258,8 +258,8 @@ include 'includeVars.F90'
       Res = 0d0
       call EvalAmp_GBB_TBWPH(Mom,TTBHcoupl,TopDecays,LO_Res_Unpol)
       Res = Res &
-            + LO_Res_Unpol(0,ABot_)   *  NNpdf(1,0)*NNpdf(2,ABot_)     &
-            + LO_Res_Unpol(ABot_,0)   *  NNpdf(1,ABot_)*NNpdf(2,0)
+            + LO_Res_Unpol(0,ABot_)   *  NNpdf(1,0)*NNpdf(2,-5)     &
+            + LO_Res_Unpol(ABot_,0)   *  NNpdf(1,-5)*NNpdf(2,0)
 
       Res = Res/x1/x2/(2d0*E_CMS**2)
             
